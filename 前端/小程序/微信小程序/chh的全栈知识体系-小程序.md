@@ -1587,8 +1587,6 @@ options: {
 
 #### 05.Component构造器
 
-# Component 构造器
-
 `Component` 构造器可用于定义组件，调用 `Component` 构造器时可以指定组件的属性、数据、方法等。
 
 ```
@@ -1645,6 +1643,45 @@ Component({
   options: {
     multipleSlots: true
   },
+})
+```
+
+### 17.网络请求
+
+**01.网络请求入门**
+
+微信提供了专属的API接口,用于网络请求: wx.request(Object object)
+
+| 属性         | 类型                      | 默认值 | 必填 | 说明                                                         | 最低版本                                                     |
+| :----------- | :------------------------ | :----- | :--- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| url          | string                    |        | 是   | 开发者服务器接口地址                                         |                                                              |
+| data         | string/object/ArrayBuffer |        | 否   | 请求的参数                                                   |                                                              |
+| header       | Object                    |        | 否   | 设置请求的 header，header 中不能设置 Referer。 `content-type` 默认为 `application/json` |                                                              |
+| timeout      | number                    |        | 否   | 超时时间，单位为毫秒                                         | [2.10.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| method       | string                    | GET    | 否   | HTTP 请求方法                                                |                                                              |
+| dataType     | string                    | json   | 否   | 返回的数据格式                                               |                                                              |
+| responseType | string                    | text   | 否   | 响应的数据类型                                               | [1.7.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| enableHttp2  | boolean                   | false  | 否   | 开启 http2                                                   | [2.10.4](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| enableQuic   | boolean                   | false  | 否   | 开启 quic                                                    | [2.10.4](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| enableCache  | boolean                   | false  | 否   | 开启 cache                                                   | [2.10.4](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| success      | function                  |        | 否   | 接口调用成功的回调函数                                       |                                                              |
+| fail         | function                  |        | 否   | 接口调用失败的回调函数                                       |                                                              |
+| complete     | function                  |        | 否   | 接口调用结束的回调函数（调用成功、失败都会执行）             |                                                              |
+
+基础使用demo
+
+```
+wx.request({
+	url: '请求链接',
+	method: 'get',
+	timeout: 5000,
+	data: {},
+	success(res) {
+		console.log(res)
+	},
+	fail(res) {
+		console.log(res)
+	}
 })
 ```
 
