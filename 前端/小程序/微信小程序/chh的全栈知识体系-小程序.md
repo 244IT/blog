@@ -1671,11 +1671,11 @@ Component({
 基础使用demo
 
 ```
+// get请求
 wx.request({
-	url: '请求链接',
+	url: 'http://httpbin.org/get',
 	method: 'get',
 	timeout: 5000,
-	data: {},
 	success(res) {
 		console.log(res)
 	},
@@ -1683,5 +1683,22 @@ wx.request({
 		console.log(res)
 	}
 })
+// post请求,并且携带参数
+wx.request({
+  url: 'http://httpbin.org/post',
+  method: 'post',
+  data: {
+    name: 'coderwhy',
+    age: 18
+  },
+  success: function(res) {
+    console.log(res)
+  },
+  fail: function(err) {
+    console.log(err)
+  }
+})
 ```
+
+**02.网络请求的封装**
 
