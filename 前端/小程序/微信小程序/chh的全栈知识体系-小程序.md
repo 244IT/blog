@@ -1910,3 +1910,37 @@ Page({
 
 #### 2.页面跳转数据的传递
 
+**首页跳详情页**
+
+1.通过url后面的query传递参数
+
+2.通过onLoad(options)接收参数
+
+```
+// 首页.wxml
+<navigator url='/pages/detail/detail?name=why&age=18&height=1.88'>跳到详情页</navigator>
+// 详情页.js
+onLoad(options) {
+	console.log(options)
+}
+```
+
+**详情页跳首页**
+
+1.通过在onUnload生命周期中获取页面对象，操作首页的数据进行修改
+
+```
+// 详情页.js
+onUnload() {
+  // 1.获取首页的页面对象
+  // getCurrentPages当前所有栈的页面
+  const pages = getCurrentPages()
+  const home = pages[pages.length - 2]
+
+  // 2.调用页面对象的setData
+  home.setData({
+    title: '呵呵呵'
+  })
+},
+```
+
