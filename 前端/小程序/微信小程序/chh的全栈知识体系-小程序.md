@@ -1702,3 +1702,211 @@ wx.request({
 
 **02.网络请求的封装**
 
+#### 01.为什么要封装网络请求?
+
+
+
+```
+export default function request(options) {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: options.url,
+      method: options.method || 'get',
+      data: options.data || {},
+      success: resolve,
+      fail: reject
+    })
+  })
+}
+```
+
+### 18.展示弹窗
+
+#### 1.showToast
+
+| 属性     | 类型     | 默认值    | 必填 | 说明                                             | 最低版本                                                     |
+| :------- | :------- | :-------- | :--- | :----------------------------------------------- | :----------------------------------------------------------- |
+| title    | string   |           | 是   | 提示的内容                                       |                                                              |
+| icon     | string   | 'success' | 否   | 图标                                             |                                                              |
+| image    | string   |           | 否   | 自定义图标的本地路径，image 的优先级高于 icon    | [1.1.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| duration | number   | 1500      | 否   | 提示的延迟时间                                   |                                                              |
+| mask     | boolean  | false     | 否   | 是否显示透明蒙层，防止触摸穿透                   |                                                              |
+| success  | function |           | 否   | 接口调用成功的回调函数                           |                                                              |
+| fail     | function |           | 否   | 接口调用失败的回调函数                           |                                                              |
+| complete | function |           | 否   | 接口调用结束的回调函数（调用成功、失败都会执行） |                                                              |
+
+```
+wx.showToast({
+  title: '成功',
+  icon: 'success',
+  duration: 2000
+})
+```
+
+#### 2.showModal
+
+| 属性         | 类型     | 默认值  | 必填 | 说明                                               |
+| :----------- | :------- | :------ | :--- | :------------------------------------------------- |
+| title        | string   |         | 否   | 提示的标题                                         |
+| content      | string   |         | 否   | 提示的内容                                         |
+| showCancel   | boolean  | true    | 否   | 是否显示取消按钮                                   |
+| cancelText   | string   | '取消'  | 否   | 取消按钮的文字，最多 4 个字符                      |
+| cancelColor  | string   | #000000 | 否   | 取消按钮的文字颜色，必须是 16 进制格式的颜色字符串 |
+| confirmText  | string   | '确定'  | 否   | 确认按钮的文字，最多 4 个字符                      |
+| confirmColor | string   | #576B95 | 否   | 确认按钮的文字颜色，必须是 16 进制格式的颜色字符串 |
+| success      | function |         | 否   | 接口调用成功的回调函数                             |
+| fail         | function |         | 否   | 接口调用失败的回调函数                             |
+| complete     | function |         | 否   | 接口调用结束的回调函数（调用成功、失败都会执行）   |
+
+```
+wx.showModal({
+  title: '提示',
+  content: '这是一个模态弹窗',
+  success (res) {
+    if (res.confirm) {
+      console.log('用户点击确定')
+    } else if (res.cancel) {
+      console.log('用户点击取消')
+    }
+  }
+})
+```
+
+#### 3.showLoading
+
+| 属性     | 类型     | 默认值 | 必填 | 说明                                             |
+| :------- | :------- | :----- | :--- | :----------------------------------------------- |
+| title    | string   |        | 是   | 提示的内容                                       |
+| mask     | boolean  | false  | 否   | 是否显示透明蒙层，防止触摸穿透                   |
+| success  | function |        | 否   | 接口调用成功的回调函数                           |
+| fail     | function |        | 否   | 接口调用失败的回调函数                           |
+| complete | function |        | 否   | 接口调用结束的回调函数（调用成功、失败都会执行） |
+
+```
+wx.showLoading({
+  title: '加载中',
+})
+
+setTimeout(function () {
+  wx.hideLoading()
+}, 2000)
+```
+
+#### 4.showActionSheet
+
+| 属性      | 类型           | 默认值  | 必填 | 说明                                             |
+| :-------- | :------------- | :------ | :--- | :----------------------------------------------- |
+| itemList  | Array.<string> |         | 是   | 按钮的文字数组，数组长度最大为 6                 |
+| itemColor | string         | #000000 | 否   | 按钮的文字颜色                                   |
+| success   | function       |         | 否   | 接口调用成功的回调函数                           |
+| fail      | function       |         | 否   | 接口调用失败的回调函数                           |
+| complete  | function       |         | 否   | 接口调用结束的回调函数（调用成功、失败都会执行） |
+
+```
+wx.showActionSheet({
+  itemList: ['A', 'B', 'C'],
+  success (res) {
+    console.log(res.tapIndex)
+  },
+  fail (res) {
+    console.log(res.errMsg)
+  }
+})
+```
+
+### 19.分享
+
+#### 1.点击右上角分享
+
+通过在页面中添加onShareAppMessage()函数触发分享，此时点击右上角三点按钮弹出下拉框中包括转发选项。
+
+可以配置以下选项，选择转发时显示的标题和图片已经路径：
+
+| 字段     | 说明                                                         | 默认值                                    | 最低版本                                                     |
+| :------- | :----------------------------------------------------------- | :---------------------------------------- | :----------------------------------------------------------- |
+| title    | 转发标题                                                     | 当前小程序名称                            |                                                              |
+| path     | 转发路径                                                     | 当前页面 path ，必须是以 / 开头的完整路径 |                                                              |
+| imageUrl | 自定义图片路径，可以是本地文件路径、代码包文件路径或者网络图片路径。支持PNG及JPG。显示图片长宽比是 5:4。 | 使用默认截图                              | [1.5.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+
+```
+Page({
+  onShareAppMessage: function (res) {
+    if (res.from === 'button') {
+      // 来自页面内转发按钮
+      console.log(res.target)
+    }
+    return {
+      title: '自定义转发标题',
+      path: '/page/user?id=123'
+    }
+  }
+})
+```
+
+#### 2.自定义按钮分享
+
+```
+<button size="mini" open-type="share">分享</button>
+```
+
+### 20.小程序登录流程
+
+* 
+
+### 21.页面跳转
+
+#### 1.navigator组件的使用
+
+* 界面的跳转有两种方式：通过navigator组件 和 通过wx的API跳转 
+
+**navigator组件**
+
+| 属性                   | 类型    | 默认值          | 必填 | 说明                                                         | 最低版本                                                     |
+| :--------------------- | :------ | :-------------- | :--- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| target                 | string  | self            | 否   | 在哪个目标上发生跳转，默认当前小程序                         | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| url                    | string  |                 | 否   | 当前小程序内的跳转链接                                       | [1.0.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| open-type              | string  | navigate        | 否   | 跳转方式                                                     | [1.0.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| delta                  | number  | 1               | 否   | 当 open-type 为 'navigateBack' 时有效，表示回退的层数        | [1.0.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| app-id                 | string  |                 | 否   | 当`target="miniProgram"`时有效，要打开的小程序 appId         | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| path                   | string  |                 | 否   | 当`target="miniProgram"`时有效，打开的页面路径，如果为空则打开首页 | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| extra-data             | object  |                 | 否   | 当`target="miniProgram"`时有效，需要传递给目标小程序的数据，目标小程序可在 `App.onLaunch()`，`App.onShow()` 中获取到这份数据。[详情](https://developers.weixin.qq.com/miniprogram/dev/framework/app-service/app.html) | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| version                | string  | release         | 否   | 当`target="miniProgram"`时有效，要打开的小程序版本           | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| hover-class            | string  | navigator-hover | 否   | 指定点击时的样式类，当`hover-class="none"`时，没有点击态效果 | [1.0.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| hover-stop-propagation | boolean | false           | 否   | 指定是否阻止本节点的祖先节点出现点击态                       | [1.5.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| hover-start-time       | number  | 50              | 否   | 按住后多久出现点击态，单位毫秒                               | [1.0.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| hover-stay-time        | number  | 600             | 否   | 手指松开后点击态保留时间，单位毫秒                           | [1.0.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| bindsuccess            | string  |                 | 否   | 当`target="miniProgram"`时有效，跳转小程序成功               | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| bindfail               | string  |                 | 否   | 当`target="miniProgram"`时有效，跳转小程序失败               | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| bindcomplete           | string  |                 | 否   | 当`target="miniProgram"`时有效，跳转小程序完成               | [2.0.7](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+
+**open-type 的合法值**
+
+| 值           | 说明                                                         | 最低版本                                                     |
+| :----------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
+| navigate     | 对应 [wx.navigateTo](https://developers.weixin.qq.com/miniprogram/dev/api/route/wx.navigateTo.html) 或 [wx.navigateToMiniProgram](https://developers.weixin.qq.com/miniprogram/dev/api/open-api/miniprogram-navigate/wx.navigateToMiniProgram.html) 的功能 |                                                              |
+| redirect     | 对应 [wx.redirectTo](https://developers.weixin.qq.com/miniprogram/dev/api/route/wx.redirectTo.html) 的功能 |                                                              |
+| switchTab    | 对应 [wx.switchTab](https://developers.weixin.qq.com/miniprogram/dev/api/route/wx.switchTab.html) 的功能 |                                                              |
+| reLaunch     | 对应 [wx.reLaunch](https://developers.weixin.qq.com/miniprogram/dev/api/route/wx.reLaunch.html) 的功能 | [1.1.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| navigateBack | 对应 [wx.navigateBack](https://developers.weixin.qq.com/miniprogram/dev/api/route/wx.navigateBack.html) 的功能 | [1.1.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+| exit         | 退出小程序，`target="miniProgram"`时生效                     | [2.1.0](https://developers.weixin.qq.com/miniprogram/dev/framework/compatibility.html) |
+
+```
+<navigator url='/pages/detail/detail'
+           open-type='redirect'>
+</navigator>
+```
+
+
+
+**通过wx的API跳转 ：wx.navigateTo**
+
+| 属性     | 类型     | 默认值 | 必填 | 说明                                                         |
+| :------- | :------- | :----- | :--- | :----------------------------------------------------------- |
+| url      | string   |        | 是   | 需要跳转的应用内非 tabBar 的页面的路径 (代码包路径), 路径后可以带参数。参数与路径之间使用 `?` 分隔，参数键与参数值用 `=` 相连，不同参数用 `&` 分隔；如 'path?key=value&key2=value2' |
+| events   | Object   |        | 否   | 页面间通信接口，用于监听被打开页面发送到当前页面的数据。基础库 2.7.3 开始支持。 |
+| success  | function |        | 否   | 接口调用成功的回调函数                                       |
+| fail     | function |        | 否   | 接口调用失败的回调函数                                       |
+| complete | function |        | 否   | 接口调用结束的回调函数（调用成功、失败都会执行）             |
+
+#### 2.页面跳转数据的传递
+
