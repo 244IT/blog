@@ -388,3 +388,256 @@ String 和 Symbol 。 Symbol （符号）是 ECMAScript 6 新增的。还有一�
 
 ##### 3.4.1  typeof 操作符
 
+使用typeof操作符可以检测数据的数据类型，会返回下列字符串之一
+
+* "undefined" 表示值未定义；
+
+* "boolean" 表示值为布尔值；
+*  "string" 表示值为字符串；
+*  "number" 表示值为数值；
+* "object" 表示值为对象（而不是函数）或 null ；
+* "function" 表示值为函数；
+* "symbol" 表示值为符号。
+
+所以，typeof对于基本数据类型，除了null都能返回正确的类型，对于引用数据类型，除了function都会返回"object"！
+
+>注意：
+>
+>* typeof 是一个操作符而不是函数
+>* typeof的返回值是字符串
+>
+>为什么调用 typeofnull 返回的是 "object"？
+>
+>* 因为特殊值 null 被认为是一个对空对象的引用
+
+##### 3.4.2  Undefined 类型
+
+**知识点1：**Undefined 类型只有一个值，就是特殊值 undefined
+
+**知识点2:**Undefined表示未初始化，当使用 var 或 let 声明了变量但没有初始化时，就相当于给变量赋予了 undefined 值：
+
+```
+let message;
+console.log(message === undefined); // true
+```
+
+这段代码相当于
+
+```
+let message = undefined;
+console.log(message === undefined); // true
+```
+
+**知识点3:**但实际上我们不会给变量赋值undefined，因为没这个必要，未初始化的变量都会取得undefined值。
+
+>undefined在 ECMA-262 第 3 版之前是不存在的。增加这个特殊值的目的就是为
+>了正式明确空对象指针（ null ）和未初始化变量的区别
+
+**知识点4:**包含 undefined 值的变量跟未定义变量是有区别的：
+
+```
+let message; // 这个变量被声明了，只是值为 undefined
+// 确保没有声明过这个变量
+// let age
+console.log(message); // "undefined"
+console.log(age); // 报错
+```
+
+>对于一些名词作一下解释：未声明，未定义，未初始化...
+>
+>* 未声明 = 未定义，表示压根没声明/定义这个变量
+>* 未初始化 = 为赋值，表示声明了但是没有初始化/赋值
+
+**知识点5:**对未声明的变量，可以对它调用 typeof 。（对未声明的变量调用 delete 也不会报错，但这个操作没什么用，
+实际上在严格模式下会抛出错误。）
+
+```
+let message; // 这个变量被声明了，只是值为 undefined
+// 确保没有声明过这个变量
+// let age
+console.log(typeof message); // "undefined"
+console.log(typeof age); // "undefined"
+```
+
+**知识点6:**undefined 是一个假值（转换布尔值为false）
+
+```
+let message; // 这个变量被声明了，只是值为 undefined
+// age 没有声明
+if (message) {
+// 这个块不会执行
+}
+if (!message) {
+// 这个块会执行
+}
+```
+
+* if语句括号内会自动对非布尔值进行类型转换
+
+##### 3.4.3  Null 类型
+
+**知识点1：**Null 类型同样只有一个值，即特殊值 null
+
+**知识点2：** null 值表示一个空对象指针，这也是给typeof 传一个 null 会返回 "object" 的原因：
+
+```
+let car = null;
+console.log(typeof car); // "object"
+```
+
+**知识点3：**在定义将来要保存对象值的变量时，建议使用 null 来初始化，不要使用其他值。（其实很多人也喜欢直接用空对象{}初始化对象）
+
+```
+let car = null // 初始化对象
+car = {
+ ...
+}
+```
+
+**知识点4：**用等于操作符（ == ）比较 null 和 undefined 始终返回 true
+
+**知识点5：** null 和 undefined 有关系，但是它们的用途也是完全不一样的
+
+* 不必显式地将变量值设置为 undefined，但null不是这样
+
+**知识点6：**null 是一个假值（同undefined）
+
+##### 3.4.4  Boolean 类型
+
+**知识点1：**Boolean （布尔值）类型是 ECMAScript 中使用最频繁的类型之一，有两个字面值： true 和 false 
+
+**知识点2：**布尔值字面量 true 和 false 是区分大小写的，因此 True 和 False （及其他大小混写形式）
+是有效的标识符，但不是布尔值
+
+**知识点3：**可以通过 Boolean()将其他的数据类型装换为布尔值，总结下其转换规则
+
+| 数据类型  | 转换为 true 的值       | 转换为 false 的值           |
+| --------- | ---------------------- | --------------------------- |
+| Boolean   | true                   | false                       |
+| String    | 非空字符串             | "" （空字符串，有空格不算） |
+| Number    | 非零数值（包括无穷值） | 0 （包括+0、-0）、 NaN      |
+| Object    | 任意对象               | null                        |
+| Undefined | N/A （不存在）         | undefined                   |
+
+##### 3.4.5  Number 类型
+
+**知识点1：** Number 类型使用 IEEE 754格式表示整数和浮点值（在某些语言中也叫双精度值），这也是某些小数相加精度失准的原因之一。
+
+**知识点2：**最常使用十进制整数，但是也可以用八进制或十六进制字面量表示。
+
+```
+let octalNum1 = 070; // 八进制的 56
+let hexNum1 = 0xA; // 十六进制 10
+```
+
+> 八进制字面量在严格模式下是无效的，会导致 JavaScript 引擎抛出语法错误
+
+###### 1.浮点值
+
+**知识点3：**小数点前面不是必须有整数，但推荐加上
+
+```
+let floatNum2 = 0.1;
+let floatNum3 = .1; // 有效，但不推荐
+floatNum2 === floatNum3 // true
+```
+
+
+
+**知识点4：**因为存储浮点值使用的内存空间是存储整数值的两倍，所以 ECMAScript 总是想方设法把值转换为
+整数。
+
+```
+let floatNum1 = 1.; // 小数点后面没有数字，当成整数 1 处理
+let floatNum2 = 10.0; // 小数点后面是零，当成整数 10 处理
+```
+
+**知识点5：**对于非常大或非常小的数值，浮点值可以用科学记数法来表示。格式要求是一个数值（整数或浮点数）后跟一个大写或小写的字母 e，再加上一个要乘的 10 的多少次幂。
+
+```
+let floatNum1 = 3.125e7; // 等于 31250000
+let floatNum2 =  3e-17; // 等于 0.00000000000000003
+```
+
+**知识点6：**浮点值的精确度最高可达 17 位小数，但在算术计算中远不如整数精确。
+
+* 0.1 加 0.2 得到的不是 0.3，而是 0.300 000 000 000 000 04
+
+>注意:
+>
+>* 之所以存在这种舍入错误，是因为使用了 IEEE 754数值，这种错误并非 ECMAScript
+>  所独有。其他使用相同格式的语言也有这个问题。
+
+###### 2.值的范围
+
+**知识点7：**js支持的数值大小是有限制的，最大是Number.MAX_VALUE 中，这个值在多数浏览器中是 1.797 693 134 862 315 7e+308，最小是Number.MIN_VALUE 中，这个值在多数浏览器中是 5e324
+
+**知识点8：**如果超过最大/最小值，会被自动转换为Infinity/-Infinity
+
+```
+console.log( 3e+308) //Infinity
+```
+
+**知识点9：** 使用 Number.NEGATIVE_INFINITY 和 Number.POSITIVE_INFINITY 也可以获取正、负 Infinity
+
+###### 3.NaN
+
+**知识点10：**NaN表示“不是数值”（Not a Number）在 ECMAScript 中，0、+0 或0 相除会返回 NaN：
+
+```
+console.log(0/0); // NaN
+console.log(-0/+0); // NaN
+```
+
+如果分子是非 0 值，分母是有符号 0 或无符号 0，则会返回 Infinity 或 -Infinity ：
+
+```
+console.log(5/0); // Infinity
+console.log(5/-0); // -Infinity
+```
+
+**知识点11：** NaN与任何数计算都为NaN， NaN 不等于包括 NaN 在内的任何值
+
+```
+console.log(NaN + 3) // NaN
+console.log(NaN == NaN); // false
+```
+
+**知识点12：**可以使用 isNaN() 函数检测值是否为NaN，对于非数值类型的值，会自动进行类型转换（其他类型转数字查看下文）
+
+```
+console.log(isNaN(NaN)); // true
+console.log(isNaN(10)); // false，10 是数值
+console.log(isNaN("10")); // false，可以转换为数值 10
+console.log(isNaN("blue")); // true，不可以转换为数值
+console.log(isNaN(true)); // false，可以转换为数值 1
+```
+
+###### 4.数值装换
+
+**知识点13：**有 3 个函数可以将非数值转换为数值： Number() 、 parseInt() 和 parseFloat()。 Number() 是
+转型函数，可用于任何数据类型。后两个函数主要用于将字符串转换为数值。
+
+>除了这三个函数，使用一元计算符号也可以将非数值转换为数值
+
+**知识点14：**Number() 函数基于如下规则执行转换
+
+* 布尔值， true 转换为 1， false 转换为 0
+* 数值，直接返回
+* null ，返回 0
+* undefined ，返回 NaN 
+* 字符串，应用以下规则：
+  * 如果字符串包含数值字符，包括数值字符前面带加、减号的情况，则转换为一个十进制数值。
+    因此， Number("1") 返回 1， Number("123") 返回 123， Number("011") 返回 11（忽略前面
+    的零）。
+  * 如果字符串包含有效的浮点值格式如 "1.1" ，则会转换为相应的浮点值（同样，忽略前面的零）。
+  * 如果字符串包含有效的十六进制格式如 "0xf" ，则会转换为与该十六进制值对应的十进制整
+    数值。
+  * 如果是空字符串（不包含字符），则返回 0。
+  * 如果字符串包含除上述情况之外的其他字符，则返回 NaN 。
+* 对象，调用 valueOf() 方法，并按照上述规则转换返回的值。如果转换结果是 NaN ，则调用
+  toString() 方法，再按照转换字符串的规则转换。
+
+**知识点15：**
+
+**知识点16：**
