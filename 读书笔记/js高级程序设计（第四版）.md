@@ -736,7 +736,7 @@ let foundAsString = found.toString(); // 字符串"true"
 **知识点7:**多数情况下， toString() 不接收任何参数。不过，在对数值调用这个方法时， toString() 可以接收一个底数参数。
 
 ```
-et num = 10;
+let num = 10;
 console.log(num.toString()); // "10"
 console.log(num.toString(2)); // "1010"
 console.log(num.toString(8)); // "12"
@@ -760,5 +760,327 @@ console.log(true + '') // "string"
 
 ###### 4. 模板字面量
 
-**知识点10:**
+**知识点10:**ES6新增了使用模板字面量定义字符串的方式（即模板字符串），与使用单引号或双引号不同，模板字面量保留换行字符，可以跨行定义字符串：
+
+```
+let myMultiLineString = 'first line\nsecond line';
+let myMultiLineTemplateLiteral = `first line
+second line`;
+console.log(myMultiLineString);
+// first line
+// second line"
+console.log(myMultiLineTemplateLiteral);
+// first line
+// second line
+console.log(myMultiLineString === myMultiLinetemplateLiteral); // true
+```
+
+顾名思义，模板字面量在定义模板时特别有用，比如下面这个 HTML 模板：
+
+```
+let pageHTML = `
+<div>
+    <a href="#">
+    	<span>Jake</span>
+    </a>
+</div>`;
+```
+
+如果用单/双引号实现相同的效果是这样的：
+
+```
+let pageHTML = 
+"<div>" +
+	"<a href='#'>" +
+    	"<span>Jake</span>" +
+    "</a>" +
+"</div>;"	
+```
+
+* 可以看到使用单/双引号的方式相比模板字面量麻烦很多，且最后的结果没有保留换行和空格。
+
+**知识点11:**由于模板字面量会保持反引号内部的空格，因此在使用时要格外注意。格式正确的模板字符串看起
+来可能会缩进不当：
+
+```
+// 这个模板字面量在换行符之后有 25 个空格符
+let myTemplateLiteral = `first line
+second line`;
+console.log(myTemplateLiteral.length); // 47
+// 这个模板字面量以一个换行符开头
+let secondTemplateLiteral = `
+first line
+second line`;
+console.log(secondTemplateLiteral[0] === '\n'); // true
+// 这个模板字面量没有意料之外的字符
+let thirdTemplateLiteral = `first line
+second line`;
+console.log(thirdTemplateLiteral);
+// first line
+// second line
+```
+
+###### 5. 字符串插值
+
+**知识点12:**模板字面量最常用的一个特性是支持字符串插值，也就是可以在一个连续定义中插入一个或多个
+值，字符串插值通过在 ${} 中使用一个 JavaScript 表达式实现：：
+
+```
+let value = 5;
+let exponent = 'second';
+// 以前，字符串插值是这样实现的：
+let interpolatedString =
+value + ' to the ' + exponent + ' power is ' + (value * value);
+// 现在，可以用模板字面量这样实现：
+let interpolatedTemplateLiteral =
+`${ value } to the ${ exponent } power is ${ value * value }`;
+console.log(interpolatedString); // 5 to the second power is 25
+console.log(interpolatedTemplateLiteral); // 5 to the second power is 25
+```
+
+**知识点13:**所有插入的值都会使用 toString() 强制转型为字符串，而且任何 JavaScript 表达式都可以用于插
+值。嵌套的模板字符串无须转义：
+
+```
+console.log(`Hello, ${ `World` }!`); // Hello, World!
+```
+
+**知识点14:**将表达式转换为字符串时会调用 toString() :
+
+```
+let foo = { toString: () => 'World' };
+console.log(`Hello, ${ foo }!`); // Hello, World!
+```
+
+**知识点15:**在插值表达式中可以调用函数和方法：
+
+```
+function capitalize(word) {
+	return `${ word[0].toUpperCase() }${ word.slice(1) }`;
+}
+console.log(`${ capitalize('hello') }, ${ capitalize('world') }!`); // Hello, World!
+```
+
+###### 6. 模板字面量标签函数(先略)
+
+###### 7. 原始字符串(先略)
+
+##### 3.4.7  Symbol 类型(先略)
+
+##### 3.4.8  Object 类型(简单介绍)
+
+ **知识点1：**ECMAScript 中的对象其实就是一组数据和功能的集合，开发者可以通过创建Object的实例来创建对象：
+
+```
+let o = new Object();
+```
+
+（补）但是还有另一种很受欢迎的创建对象的方式
+
+```
+let o = {}
+```
+
+****
+
+**知识点2:**每个 Object 实例都有如下属性和方法
+
+* constructor ：用于创建当前对象的函数。在前面的例子中，这个属性的值就是 Object()
+  函数。
+* hasOwnProperty(propertyName) ：用于判断当前对象实例（不是原型）上是否存在给定的属
+  性。要检查的属性名必须是字符串（如 o.hasOwnProperty("name") ）或符号。
+* isPrototypeOf(object) ：用于判断当前对象是否为另一个对象的原型。（第 8 章将详细介绍
+  原型。）
+* propertyIsEnumerable(propertyName) ：用于判断给定的属性是否可以使用（本章稍后讨
+  论的） for-in 语句枚举。与 hasOwnProperty() 一样，属性名必须是字符串。
+* toLocaleString() ：返回对象的字符串表示，该字符串反映对象所在的本地化执行环境。
+* toString() ：返回对象的字符串表示。
+* valueOf() ：返回对象对应的字符串、数值或布尔值表示。通常与 toString() 的返回值相同。
+
+#### 3.5.操作符
+
+##### 3.5.1 一元操作符
+
+**知识点1:**只操作一个值的操作符叫一元操作符（unary operator）。一元操作符是 ECMAScript中最简单的操作符。
+
+###### 1. 递增/递减操作符
+
+**知识点2:**前/后置递增/递减操作
+
+前置递增/递减：变量的值都会在语句被求值之前改变
+
+```
+let age = 29;
+let anotherAge = --age + 2;
+console.log(age); // 28
+console.log(anotherAge); // 30
+```
+
+* anotherAge的值为：age先减为28后再与2相加的30
+
+后置递增/递减：变量的值都会在语句被求值之后改变
+
+```
+let num1 = 2;
+let num2 = 20;
+let num3 = num1-- + num2;
+let num4 = num1 + num2;
+console.log(num3); // 22
+console.log(num4); // 21
+```
+
+* num3的值为：num1还未减前的2和20相加的22
+
+**知识点3:**递增和递减操作符遵循如下规则：
+
+* 对于字符串，如果是有效的数值形式，则转换为数值再应用改变。变量类型从字符串变成数值。
+* 对于字符串，如果不是有效的数值形式，则将变量的值设置为 NaN 。变量类型从字符串变成
+  数值。
+* 对于布尔值，如果是 false ，则转换为 0 再应用改变。变量类型从布尔值变成数值。
+* 对于布尔值，如果是 true ，则转换为 1 再应用改变。变量类型从布尔值变成数值。
+* 对于浮点值，加 1 或减 1。
+* 如果是对象，则调用其（第 5 章会详细介绍的） valueOf() 方法取得可以操作的值。对得到的
+  值应用上述规则。如果是 NaN ，则调用 toString() 并再次应用其他规则。变量类型从对象变成
+  数值。
+
+```
+let s1 = "2";
+let s2 = "z";
+let b = false;
+let f = 1.1;
+let o = {
+    valueOf() {
+    	return -1;
+    }
+};
+s1++; // 值变成数值 3
+s2++; // 值变成 NaN
+b++; // 值变成数值 1
+f--; // 值变成 0.10000000000000009（因为浮点数不精确）
+o--; // 值变成-2
+```
+
+###### 2.一元加和减
+
+**知识点4:**一元加由一个加号（ + ）表示，放在变量前头，对数值没有任何影响，如果将一元加应用到非数值，则会执行与使用 Number() 转型函数一样的类型转换：
+
+```
+let num = 25;
+num = +num;
+console.log(num); // 25,没影响
+
+let s1 = "01";
+let s2 = "1.1";
+let s3 = "z";
+let b = false;
+let f = 1.1;
+let o = {
+    valueOf() {
+    	return -1;
+    }
+};
+s1 = +s1; // 值变成数值 1
+s2 = +s2; // 值变成数值 1.1
+s3 = +s3; // 值变成 NaN
+b = +b; // 值变成数值 0
+f = +f; // 不变，还是 1.1
+o = +o; // 值变成数值-1
+```
+
+**知识点5:**对数值使用一元减会将其变成相应的负值（如上面的例子所示）。在应用到非数值时，一元减会遵
+循与一元加同样的规则，先对它们进行转换，然后再取负值：
+
+```
+let s1 = "01";
+let s2 = "1.1";
+let s3 = "z";
+let b = false;
+let f = 1.1;
+let o = {
+    valueOf() {
+    	return -1;
+    }
+};
+s1 = -s1; // 值变成数值-1
+s2 = -s2; // 值变成数值-1.1
+s3 = -s3; // 值变成 NaN
+b = -b; // 值变成数值 0
+f = -f; // 变成-1.1
+o = -o; // 值变成数值 1
+```
+
+* 综上，一元加和减操作符主要用于基本的算术，但也可以用于数据类型转换
+
+##### 3.5.2 位操作符（先略）
+
+##### 3.5.3 布尔操作符
+
+###### 1.逻辑非
+
+逻辑非主要有以下两种用法：
+
+**知识点6:**将操作数取反（先转换为布尔值（转换参考3.4.4），再对其取反）
+
+```
+console.log(!false); // true
+console.log(!"blue"); // false
+console.log(!0); // true
+console.log(!NaN); // true
+console.log(!""); // true
+console.log(!12345); // false
+```
+
+**知识点7:**也可以用于把任意值转换为布尔值
+
+```
+console.log(!!"blue"); // true
+console.log(!!0); // false
+console.log(!!NaN); // false
+console.log(!!""); // false
+console.log(!!12345); // true
+```
+
+###### 2.逻辑与
+
+**知识点8:**逻辑与操作符由两个和号（ && ）表示，其操作规则以我的总结是：返回第一个假值，如果第一个不是假值，则返回第二个值（对于不是布尔值，会先转换为布尔值再判断）。
+
+```
+let found = true;
+let result = (found && someUndeclaredVariable); // 这里会出错
+console.log(result); // 不会执行这一行
+```
+
+* 第二行因为found为true，执行并返回someUndeclaredVariable，someUndeclaredVariable未定义所以报错。
+
+**其实原书中的对于逻辑与的规则描述是这样的**：
+
+1. 如果第一个操作数是对象，则返回第二个操作数。
+2. 如果第二个操作数是对象，则只有第一个操作数求值为 true 才会返回该对象。
+3. 如果两个操作数都是对象，则返回第二个操作数。
+4. 如果有一个操作数是 null ，则返回 null 。
+5. 如果有一个操作数是 NaN ，则返回 NaN 。
+6. 如果有一个操作数是 undefined ，则返回 undefined 。
+
+再结合我的总结：
+
+* 如果第一个操作数是对象（转为布尔值不是假值），则返回第二个操作数
+* 如果第二个操作数是对象（转为布尔值是真值），则只有第一个操作数求值为 true 才会返回该对象（返回第一个假值）。
+* 如果两个操作数都是对象，则返回第二个操作数。（对象都是真值，所以返回第二个值）
+* 如果有一个操作数是 null ，则返回 null （null为假值，直接返回）
+* 如果有一个操作数是 NaN ，则返回 NaN （NaN 为假值，直接返回）
+* 如果有一个操作数是 undefined ，则返回 undefined （undefined 为假值，直接返回）
+
+###### 2.逻辑或
+
+**知识点9:**逻辑或操作符由两个管道符（ || ）表示，其操作规则以我的总结是：返回第一个真值，如果第一个不是真值，则返回第二个（对于不是布尔值，会先转换为布尔值再判断）。
+
+```
+let found = false;
+let result = (found || someUndeclaredVariable); // 这里会出错
+console.log(result); // 不会执行这一行
+```
+
+逻辑或和与在工作中的应用非常常见！！！
+
+##### 3.5.3 乘性操作符
 
