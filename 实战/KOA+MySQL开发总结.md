@@ -133,4 +133,35 @@ app.listen(3000)
 ```
 
 * header参数
-* 
+
+### 密码撒盐
+
+撒盐逻辑写在路由中
+
+```
+// 校验
+const v = await new RegisterValidator().validate(ctx)
+
+const salt = bcrypt.genSaltSync(10)
+const pwd = bcrypt.hashSync(v.get('body.password2'), salt)
+// 插入数据库
+const user = {
+  email: v.get('body.email'),
+  password: pwd,
+  nickname: v.get('body.nickname')
+}
+```
+
+撒盐逻辑写在模型中
+
+```
+password: {
+  type: Sequelize.STRING,
+  set(val) {
+    const salt = bcrypt.genSaltSync(10)
+    const pwd = bcrypt.hashSync(val, salt)
+    this.setDataValue(pwd)
+  }
+},
+```
+
