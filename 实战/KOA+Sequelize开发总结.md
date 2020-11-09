@@ -165,3 +165,99 @@ password: {
 },
 ```
 
+### token校验器
+
+v1/token.js
+
+```
+const Router = require('koa-router')
+
+const router = new Router({
+	prefix" '/v1/token'
+})
+
+router.post('/', async (ctx) => {
+})
+```
+
+http-exception.js
+
+```
+class TokenValidate extends LinValidate {
+	constructor() {
+		super()
+		this.account = [		
+			new Rule('isLength', '不符合账号规则，至少6个字符', {min: 6, max: 32})
+		]
+		this.secret = [
+			new Rule('isOption')
+			new Rule('isLength'， '至少6个字符', {min: 6, max: 128})
+		]
+	}
+}
+```
+
+### 模拟枚举
+
+lib/enum.js
+
+```
+function isThisType(val) {
+	for(let prop in this) {
+		if(this[prop] === val) {
+			return true
+		}
+	}
+	return false
+}
+
+const loginType = {
+	USER_MINI_PROGRAM: 100,
+	USER_EMAIL: 101,
+	USRE_MOBILE: 102,
+	ADMIN_EMAIL: 201,
+	isThisType
+}
+```
+
+http-exception.js
+
+```
+class TokenValidate extends LinValidate {
+	constructor() {
+		super()
+		this.account = [		
+			new Rule('isLength', '不符合账号规则，至少6个字符', {min: 6, max: 32})
+		]
+		this.secret = [
+			new Rule('isOption')
+			new Rule('isLength'， '至少6个字符', {min: 6, max: 128})
+		]
+		validateLoginType(vals) {
+			if(!vals.body.type) {
+				throw new Error('type是必填参数')
+			}
+			if(!loginType.isThisType(vals.body.type)) {
+				throw new Error('type参数不合法')
+			}
+		}
+	}
+}
+```
+
+v1/token.js
+
+```
+const Router = require('koa-router')
+const { TokenValidate } = require('../../validate/validate')
+const router = new Router({
+	prefix" '/v1/token'
+})
+
+router.post('/', async (ctx) => {
+	const v = await new TokenValidate().validate(ctx)
+})
+```
+
+### 根据不同的登录type作不同的处理
+
