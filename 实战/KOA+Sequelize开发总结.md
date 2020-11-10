@@ -133,6 +133,7 @@ app.listen(3000)
 ```
 
 * header参数
+* body参数
 
 ### 密码撒盐
 
@@ -259,5 +260,191 @@ router.post('/', async (ctx) => {
 })
 ```
 
-### 根据不同的登录type作不同的处理
+### 根据不同的登录type获取不同的token
+
+```
+router.post('/', async (ctx) => {
+    const v = await new TokenValidator().validate(ctx)
+    let token;
+    switch (v.get('body.type')) {
+        case LoginType.USER_EMAIL:
+            token = await emailLogin(v.get('body.account'), v.get('body.secret'))
+            break
+        case LoginType.USER_MINI_PROGRAM:
+        case LoginType.ADMIN_EMAIL:
+        default:
+            throw new global.errs.ParameterException('没有相应的处理函数')
+    }
+    ctx.body = {
+        token
+    }
+})
+async function emailLogin(account, secret) {
+    const user = await User.verifyEmailPassword(account, secret)
+    return token = generateToken(user.id, Auth.USER)
+}
+```
+
+models/user.js
+
+```
+const bcrypt = require('bcryptjs')
+class User extends Model {
+    static async verifyEmailPassword(email, plainPassword) {
+        const user = await User.findOne({
+            where: {
+                email
+            }
+        })
+        if (!user) {
+            throw new global.errs.AuthFailed('账号不存在')
+        }
+        // user.password === plainPassword
+        const correct = bcrypt.compareSync(plainPassword, user.password)
+        if(!correct){
+            throw new global.errs.AuthFailed('密码不正确')
+        }
+        return user
+    }
+}
+```
+
+core/util.js
+
+```
+const jwt = require('jsonwebtoken')
+const generateToken = function(uid, scope){
+    const secretKey = global.config.security.secretKey
+    const expiresIn = global.config.security.expiresIn
+    const token = jwt.sign({
+        uid,
+        scope
+    },secretKey,{
+        expiresIn
+    })
+    return token
+}
+```
+
+config/config.js
+
+```
+module.exports = {
+    security:{
+        secretKey:"abcdefg",
+        expiresIn:60*60*24*30
+    }
+}
+```
+
+### 公开api和非公开api（检测请求是否有携带token）
+
+编写检测token的中间件
+
+middlewares/auth.js
+
+```
+const basicAuth = require('basic-auth')
+const jwt = require('jsonwebtoken')
+
+class Auth {
+    constructor() {
+    }
+    get m() {
+        return async (ctx, next) => {
+            
+            const userToken = basicAuth(ctx.req)
+            let errMsg = 'token不合法'
+			// 检测是否携带token
+            if (!userToken || !userToken.name) {
+                throw new global.errs.Forbbiden(errMsg)
+            }
+            //检测token的合法性
+            try {
+                var decode = jwt.verify(userToken.name, global.config.security.secretKey)
+            } catch (error) {
+                if (error.name == 'TokenExpiredError'){
+                    errMsg = 'token已过期'
+                }
+                throw new global.errs.Forbbiden(errMsg)
+            }
+            // uid,scope
+            ctx.auth = {
+                uid:decode.uid,
+                scope:decode.scope
+            }
+			// 进入下一个中间件
+            await next()
+        }
+    }
+
+    static verifyToken(token){
+        try{
+            jwt.verify(token, global.config.security.secretKey)
+            return true
+        }
+        catch (error){
+            return false
+        }
+
+    }
+}
+
+module.exports = {
+    Auth
+}
+```
+
+core/http-exception.js
+
+```
+class Forbbiden extends HttpException{
+    constructor(msg, errorCode) {
+        super()
+        this.msg = msg || '禁止访问'
+        this.errorCode = errorCode || 10006
+        this.code = 403
+    }
+}
+```
+
+### api权限分级控制
+
+middlewares/auth.js
+
+```
+constructor(level) {
+    this.level = level || 1
+    Auth.USER = 8
+    Auth.ADMIN = 16
+    Auth.SUPER_ADMIN = 32
+}
+
+if(decode.scope < this.level){
+    errMsg = '权限不足'
+    throw new global.errs.Forbbiden(errMsg)
+}
+```
+
+app/api/v1/token.js
+
+```
+async function emailLogin(account, secret) {
+    const user = await
+        User.verifyEmailPassword(account, secret)
+    return token = generateToken(user.id, Auth.USER)
+}
+```
+
+使用
+
+app/api/v1/classic.js
+
+```
+router.get('/latest', new Auth(9).m, async (ctx, next) => {
+
+})
+```
+
+### 小程序登录方式
 
