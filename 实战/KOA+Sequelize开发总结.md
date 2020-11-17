@@ -446,5 +446,77 @@ router.get('/latest', new Auth(9).m, async (ctx, next) => {
 })
 ```
 
-### 小程序登录方式
+### 小程序登录方式，微信授权
+
+**业务逻辑**
+
+1. 在API接口编写？
+2. Model编写！！！
+
+MVC中业务逻辑写在Model层
+
+app/service/wx.js
+
+```
+const util = require('util')
+const axios = require('axios')
+
+const { User } = require('../models/user')
+const { generateToken } = require('../../core/util')
+const { Auth } = require('../../middlewares/auth')
+class WXManager{
+  	static async codeToToken(code) {
+		// code appid appsecret -> openid
+		const url = util.format(global.config.wx.loginUrl, global.config.wx.appId, global.config.wx.appSecret, code)
+		const result = await axios.get(url)
+		if(result.status !== 200) {
+			throw new global.errs.AuthFailed('openid获取失败')
+		}
+		const errcode = result.data.errcode
+		const errmsg = result.data.errmsg
+		if(result.errcode) {
+			throw new global.errs.AuthFailed('openid获取失败' +　errcode)
+		}
+		// 存储档案到user表中
+		let user = await User.getUserByOpenid(result.data.openid)
+        if(!user){
+            user = await User.registerByOpenid(result.data.openid)
+        }
+        return generateToken(user.id, Auth.USER)
+	}
+}
+module.exports = {
+    WXManager
+}
+```
+
+config/config.js
+
+```
+wx: {
+	// appId appSecret通过微信开发后台获取
+	appID: 'xxx',
+	appSecret: 'xxx',
+	loginUrl:'https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code'
+}
+```
+
+/models/user.js
+
+```
+static async getUserByOpenid(openid){
+    const user = await User.findOne({
+        where:{
+            openid
+        }
+    })
+    return user
+}
+
+static async registerByOpenid(openid) {
+    return await User.create({
+        openid
+    })
+}
+```
 
