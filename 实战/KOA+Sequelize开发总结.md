@@ -520,3 +520,15 @@ static async registerByOpenid(openid) {
 }
 ```
 
+使用
+
+v1/token.js
+
+```
+const axios = require('axios')
+
+case LoginType.USER_MINI_PROGRAM:
+      token = await WXManager.codeToToken(v.get('body.account'))
+      break
+```
+
