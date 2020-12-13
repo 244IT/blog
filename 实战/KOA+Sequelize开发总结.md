@@ -260,7 +260,9 @@ router.post('/', async (ctx) => {
 })
 ```
 
-### 根据不同的登录type获取不同的token
+### 第七章.主流的用户身份识别方式和权限控制
+
+#### 7.1根据不同的登录type获取不同的token
 
 ```
 router.post('/', async (ctx) => {
@@ -337,7 +339,7 @@ module.exports = {
 }
 ```
 
-### 公开api和非公开api（检测请求是否有携带token）
+#### 7.2.公开api和非公开api（检测请求是否有携带token）
 
 编写检测token的中间件
 
@@ -408,7 +410,7 @@ class Forbbiden extends HttpException{
 }
 ```
 
-### api权限分级控制
+#### 7.4api权限分级控制
 
 middlewares/auth.js
 
@@ -446,7 +448,7 @@ router.get('/latest', new Auth(9).m, async (ctx, next) => {
 })
 ```
 
-### 小程序登录方式，微信授权
+#### 7.5小程序登录方式，微信授权
 
 **业务逻辑**
 
@@ -531,4 +533,228 @@ case LoginType.USER_MINI_PROGRAM:
       token = await WXManager.codeToToken(v.get('body.account'))
       break
 ```
+
+### 第八章.lin ui在小程序中的使用
+
+#### 8.1.安装lin ui
+
+* 使用`npm init`创建package.json文件
+* 使用`npm install --save lin-ui`安装lin-ui
+* 工具->构建npm
+* json文件导入shiyong
+
+```
+{
+  "usingComponents": {
+    "l-button": "/miniprogram_npm/lin-ui/button/index"
+  }
+}
+```
+
+#### 8.2.在小程序中测试获取token
+
+```
+ /* 获取token */
+  onGetToken() {
+    wx.login({
+      success: (res) => {
+        if(res.code) {
+          wx.request({
+            url: 'http://localhost:3000/v1/token',
+            method: 'POST',
+            data: {
+              account: res.code,
+              type: 100,
+            },
+            header: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            success: (res) => {
+              console.log(res)
+              const statusCode = res.statusCode.toString()
+              if(statusCode.startsWith('2')) {
+                wx.setStorageSync('token', res.data.token)
+              }
+            }
+          })
+        }
+      }
+    })
+  },
+```
+
+### 第九章.点赞业务的实现
+
+#### 9.1.favor模型
+
+model/favor.js
+
+```
+const { sequelize } = require('../../core/db')
+const { Sequelize, Model } = require('sequelize')
+
+class Favor extends Model{
+
+}
+
+Favor.init({
+	uid: Sequelize.INTEGER,
+	type: Sequelize.INTEGER,
+	art_id: Sequelize.INTEGER
+}, {
+	sequelize,
+	tableName: 'favor'
+})
+
+
+model.exports = {
+	Favor
+}
+```
+
+#### 9.2.点赞业务逻辑（事务）
+
+* 数据库事务：数据库事务总能保证对数据的多个操作，要么就是全部执行成功，如果有一个执行失败，则全部执行都会被撤销。所以说数据库事务总能保证数据的一致性。
+
+model/favor.js
+
+```
+class Favor extends Model{
+	static async like(uid, type, art_id) {
+		const favor = Favor.findOne({
+			where: {
+				uid,
+				type,
+				art_id
+			}
+		})
+		// 如果已经点过赞了，抛出错误
+        if(favor) {
+          throw new global.err.LikeError()
+        }
+    
+        return sequelize.transation(async t => {
+          // 创建favor表
+          await Favor.create({
+            uid,
+            type,
+            art_id
+          }, {
+            transaction: t
+          })
+          // 实体模型的点赞数量加一
+          const art = await Art.getDate(art_id, type)
+          await art.increment('fav_nums', {by: 1, transaction: t})
+        })
+	}
+	static async dislike(uid, type, art_id) {
+        const favor = await Favor.findOne({
+          where: {
+            uid,
+            type,
+            art_id
+          }
+        }) 
+        // 如果已经取消点赞，抛出错误
+        if(!favor) {
+          throw new global.errs.LikeError()
+        }
+
+        return sequelize.transaction(async t => {
+          // 创建favor表
+          await favor.destroy({
+            force: true, // 物理删除和软删除
+            transaction: t
+          })
+          // 实体模型的点赞数量减一
+          const art = await Art.getDate(art_id, parseInt(type))
+          await art.decrement('fav_nums', {by: 1, transaction: t})
+        })
+      }
+} 
+```
+
+core/http_exception.js
+
+```
+class LikeError extends HttpException {
+  constructor() {
+    super()
+    this.msg = '你已经点过赞了'
+    this.errorCode = 60001
+    this.code = 400
+  }
+}
+
+class DislikeError extends HttpException {
+  constructor() {
+    super()
+    this.msg = '你已经取消点赞了'
+    this.errorCode = 60002
+    this.code = 400
+  }
+}
+```
+
+api/v1/like.js
+
+* uid是从token中解析而来，而不可能让前端通过body传递
+
+```
+const Router = require('koa-router')
+const { Auth } = require('../../../middlewares/auth')
+const { LikeValidator } = require('../../validator/validator')
+const { Favor } = require('../../models/favor')
+const { success } = require('../../lib/helper')
+const router = new Router({
+  prefix: '/v1/like'
+})
+
+
+router.post('/', new Auth().m, async ctx => {
+  const v = await new LikeValidator().validate(ctx)
+
+  await Favor.like(ctx.auth.uid, v.get('body.type'), v.get('body.art_id'))
+
+  success()
+})  
+
+router.post('/cancel', new Auth().m, async ctx => {
+  const v = await new LikeValidator().validate(ctx, {
+    id: 'art_id'
+  })
+
+  await Favor.dislike(ctx.auth.uid, v.get('body.type'), v.get('body.art_id'))
+  success()
+})
+
+module.exports = router
+```
+
+**添加参数校验**
+
+app/validator/validator.js
+
+```
+function checkType(vals) {
+  if(!vals.body.type) {
+    throw new Error('type为必填参数')
+  }
+  if(!LoginType.isThisType(vals.body.type)) {
+    throw new Error('type参数不合法')
+  }
+}
+
+/* like接口参数校验 */
+class likeValidator extends PositiveIntergerValidator{
+  constructor() {
+    super()
+    this.validateType = checkType
+  }
+}
+```
+
+
+
+
 
