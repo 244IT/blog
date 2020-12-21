@@ -227,13 +227,72 @@ demo:修改数据库的字符集和排序规则
 ALTER DATABASE bilibili CHARACTER SET = utf8 COLLATE = utf8_unicode_ci;
 ```
 
-## 4.数据表的操作
+## 4.数据表操作
 
-### 3.1.常用数据表的操作
+### 3.1.表约束
 
-* 查看所有的数据表：`SHOW TABLES`
-* 查看某一数据表结构`SHOW COLUMNS FROM tbl_name`或者`DESC tbl_name`
-* 创建数据表：
+>约束保证数据的完整性和一致性，约束分为表级约束和列级约束（针对列的数目划分，针对某一个字段的称为列级约束，针对两个或者两个以上的称为表级约束）
+
+#### 3.1.1.主键：PRIMARY KEY
+
+一张表中，我们为了区分每一条记录的唯一性，必须有一个字段是永远不会重复，并且不会为空的，这个字段我们通常会将它设置为主键：
+
+* 主键是表中唯一的索引；
+
+* 并且必须是NOT NULL的，如果没有设置 NOT NULL，那么MySQL也会隐式的设置为NOT NULL； 
+
+* 主键也可以是多列索引，PRIMARY KEY(*key_part, ...)，我们一般称之为联合主键；*
+
+> 建议：开发中主键字段应该是和业务无关的，尽量不要使用业务字段来作为主键；
+
+#### 3.1.2.唯一：UNIQUE
+
+某些字段在开发中我们希望是唯一的，不会重复的，比如手机号码、身份证号码等，这个字段我们可以使用UNIQUE来约束：
+
+* 使用UNIQUE约束的字段在表中必须是不同的；
+
+* 对于所有引擎，UNIQUE 索引允许NULL包含的列具有多个值NULL。
+
+#### 3.1.3.不能为空：NOT NULL
+
+* 某些字段我们要求用户必须插入值，不可以为空，这个时候我们可以使用 NOT NULL 来约束； 
+
+#### 3.1.4.默认值：DEFAULT
+
+* 某些字段我们希望在没有设置值时给予一个默认值，这个时候我们可以使用 DEFAULT来完成；
+
+#### 3.1.5.自动递增：AUTO_INCREMENT
+
+* 某些字段我们希望不设置值时可以进行递增，比如用户的id，这个时候可以使用AUTO_INCREMENT来完成； 
+
+#### 3.1.6.外键约束：FOREIGN KEY(补)
+
+目的： 
+
+1. 保证数据完整性和一致性
+2. 实现一对一或一对多关系
+
+外键约束的要求：
+
+1. 父表和子表必须使用相同的存储引擎，而且禁止使用临时表
+2. 数据表的存储引擎只能为INNODB
+3. 外键列和参照列必须同时具有相似的数据类型。其中数字的长度或是否有符号位必须相同；而字符长度则可以不同
+4. 外键列和参照列必须创建索引。如果外键列不存在索引的话，MySQL将自动创建索引
+
+外键约束的参照操作：
+
+1. CASCADE :从父表删除或更新且自动删除或更新子表中匹配的行
+2. SET NULL：从父表删除或更新行，并设置子表中的外键列
+3. RESTRICT：拒绝对父表的删除或更新操作
+4. NO ACTION：标准SQL的关键字，在MySQL中与RESTRICT相同
+
+### 3.2.常用数据表的操作
+
+1. 查看所有的数据表：`SHOW TABLES`
+
+2. 查看某一数据表结构`SHOW COLUMNS FROM tbl_name`或者`DESC tbl_name`
+
+3. 创建数据表：
 
 ```
 CREATE TABLE [IF NOT EXISTS] table_name(
@@ -248,22 +307,34 @@ CREATE TABLE [IF NOT EXISTS] table_name(
 demo：创建数据表
 
 ```
-CREATE TABLE IF NOT EXISTS `users`(
-    name VARCHAR(20),
-    age INT,
-    height DOUBLE
-);
+CREATE TABLE IF NOT EXISTS user (
+	id PRIMARY KEY AUTO_INCREMENT,
+	name VERCHAT(20) NOT NULL,
+	age INT DEFAULT 0,
+	phoneNum VERCHAR(20) UNIQUE DEFAULT '',
+	createTime TIMESTAMP
+)
 ```
 
-* 查看创建表结构时的语句：`SHOW CREATE TABLE tbl_name`
+5. 查看创建表结构时的语句：`SHOW CREATE TABLE tbl_name`
 
 demo：查看创建`student`表时的sql语句
 
+```
+SHOW CREATE TABLE `student`
+```
 
+6. 修改表：
 
+* 修改表的名字：`ALTER TABLE tbl_name RENAME TO new_tbl_name`
 
+* 添加一个新的列：`ALTER TABLE tbl_name ADD column_name data_type`
+* 修改字段的名称：`ALTER TABLE tbl_name CHANGE old_column_name new_column_name data_type`
 
-
+* 修改字段类型：`ALTER TABLE tbl_name MODIFY column_name new_data_type`
+* 删除某一个字符：`ALTER TABLE tbl_name DROP column_name`
+* 根据一个表结构去创建另外一张表：`CREATE TABLE new_tbl_name LIKE tbl_name`
+* 根据另外一个表的所有内容，创建一个新的表：`CREATE TABLE new_table_name (SELECT * FROM tbl_name)`
 
 1.下载免安装版
 
