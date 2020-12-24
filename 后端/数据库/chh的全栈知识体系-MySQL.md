@@ -327,14 +327,174 @@ SHOW CREATE TABLE `student`
 6. 修改表：
 
 * 修改表的名字：`ALTER TABLE tbl_name RENAME TO new_tbl_name`
-
 * 添加一个新的列：`ALTER TABLE tbl_name ADD column_name data_type`
 * 修改字段的名称：`ALTER TABLE tbl_name CHANGE old_column_name new_column_name data_type`
-
 * 修改字段类型：`ALTER TABLE tbl_name MODIFY column_name new_data_type`
-* 删除某一个字符：`ALTER TABLE tbl_name DROP column_name`
+* 删除某一个字段：`ALTER TABLE tbl_name DROP column_name`
 * 根据一个表结构去创建另外一张表：`CREATE TABLE new_tbl_name LIKE tbl_name`
 * 根据另外一个表的所有内容，创建一个新的表：`CREATE TABLE new_table_name (SELECT * FROM tbl_name)`
+
+### 3.3.DML(数据操作语言)
+
+#### 1.插入记录
+
+语法：`INSERT INTO tbl_name (col_name,...) VALUES (...)  `
+
+```
+INSERT INTO `user` VALUES (110, 'why', '020-110110', '2020-10-20', '2020-11-11');
+INSERT INTO `user` (name, telPhone, createTime, updateTime)
+						VALUES ('kobe', '000-1111111', '2020-10-10', '2030-10-20');
+						
+INSERT INTO `user` (name, telPhone)
+						VALUES ('lilei', '000-1111112');
+```
+
+#### 2.删除记录
+
+语法：`DELETE FROM tbl_name [WHERE where_condition] `
+
+```
+# 删除所有的数据
+DELETE FROM `user`;
+# 删除符合条件的数据
+DELETE FROM `user` WHERE id = 110;
+```
+
+#### 3.更新记录
+
+语法：`UPDATE tbl_name SET col_name1={expr1|DEFAULT} [,col_name2={expr1|DEFAULT}] ...[WHERE where_condition] `
+
+```
+# 更新所有的数据
+UPDATE `user` SET name = 'lily', telPhone = '010-110110';
+# 更新符合条件的数据
+UPDATE `user` SET name = 'lily', telPhone = '010-110110' WHERE id = 115;
+```
+
+### 3.4.DQL(数据查询语言)
+
+准备数据：
+
+1.一张表
+
+```
+CREATE TABLE IF NOT EXISTS `products` (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    brand VARCHAR(20),
+    title VARCHAR(100) NOT NULL,
+    price DOUBLE NOT NULL,
+    score DECIMAL(2,1),
+    voteCnt INT,
+    url VARCHAR(100),
+    pid INT
+);
+```
+
+2.安装mysql2：`npm install mysql2`执行下列代码：
+
+```
+const mysql = require('mysql2');
+const connection = mysql.createConnection({
+    host: 'localhost',
+    port: 3306,
+    user: 'root',
+    password: 'Coderwhy888.',
+    database: 'coderhub'
+    });
+    const statement = `INSERT INTO products SET ?;`
+    const phoneJson = require('./phone.json');
+    for (let phone of phoneJson) {
+    connection.query(statement, phone);
+}
+```
+
+
+
+#### 1. 基本查询
+
+```
+# 查询表中所有的字段以及所有的数据
+SELECT * FROM `products`;
+# 查询指定的字段
+SELECT title, price FROM `products`;
+# 对字段结果起一个别名
+SELECT title as phoneTitle, price as currentPrice FROM `products`;
+```
+
+#### 2.WHERE条件
+
+**条件判断语句**
+
+```
+# 案例：查询价格小于1000的手机
+SELECT title, price FROM `products` WHERE price < 1000;
+# 案例二：价格等于999的手机
+SELECT * FROM `products` WHERE price = 999;
+# 案例三：价格不等于999的手机
+SELECT * FROM `products` WHERE price != 999;
+SELECT * FROM `products` WHERE price <> 999;
+# 案例四：查询品牌是华为的手机
+SELECT * FROM `products` WHERE brand = '华为';
+```
+
+**逻辑运算语句**
+
+```
+# 案例一：查询1000到2000之间的手机
+SELECT * FROM `products` WHERE price > 1000 AND price < 2000;
+SELECT * FROM `products` WHERE price > 1000 && price < 2000;
+# BETWEEN AND 包含等于
+SELECT * FROM `products` WHERE price BETWEEN 1099 AND 2000;
+
+# 案例二：价格在5000以上或者是品牌是华为的手机
+SELECT * FROM `products` WHERE price > 5000 || brand = '华为';
+
+# 将某些值设置为NULL
+-- UPDATE `products` SET url = NULL WHERE id >= 85 and id <= 88;
+# 查询某一个值为NULL
+SELECT * FROM `products` WHERE url IS NULL;
+-- SELECT * FROM `products` WHERE url = NULL;
+-- SELECT * FROM `products` WHERE url IS NOT NULL;
+```
+
+>BETWEEN：包含等于
+
+#### 3.模糊查询(LIKE)
+
+```
+SELECT * FROM `products` WHERE title LIKE '%M%';
+SELECT * FROM `products` WHERE title LIKE '%P%';
+SELECT * FROM `products` WHERE title LIKE '_P%';
+```
+
+#### 4.查询结果排序(ORDER BY)
+
+```
+SELECT * FROM `products` WHERE brand = '华为' || brand = '小米' || brand = '苹果';
+SELECT * FROM `products` WHERE brand IN ('华为', '小米', '苹果') ORDER BY price ASC, score DESC;
+```
+
+#### 5.分页查询(LIMIT)
+
+```
+# LIMIT limit OFFSET offset;
+# Limit offset, limit;
+SELECT * FROM `products` LIMIT 20 OFFSET 0;
+SELECT * FROM `products` LIMIT 20 OFFSET 20;
+SELECT * FROM `products` LIMIT 40, 20;
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 1.下载免安装版
 
@@ -347,4 +507,6 @@ SHOW CREATE TABLE `student`
 **3.修改密码**
 
 * alter user 'root'@'localhost' identified by '新密码'
+
+
 
