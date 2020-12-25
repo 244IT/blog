@@ -1125,8 +1125,179 @@ console.log(result); // 不会执行这一行
 
 **知识点2：**
 
-* 保存原始值的变量是按值访问的，因为我们操作的就是存储在变量中的实际值（而这个值实际上和变量名一起存在栈中）
-* 保存引用值的变量是按引用访问的，因为引用值保存在内存（即堆）中，而在js中不允许我们直接访问内存地址，所以，实际上变量保存的只是引用值的内存地址（也可称为指针）
+* 保存原始值的变量是按值访问的，因为我们操作的就是存储在变量中的实际值（而这个值实际上和变量名一起存在栈内存中）
+* 保存引用值的变量是按引用访问的，因为引用值保存在堆内存中，而在js中不允许我们直接访问内存地址，所以，实际上变量保存的只是引用值的内存地址（也可称为指针）
+
+>原始值和原始类型和基本类型是一个东西，下文统一用基本类型表示
+>
+>引用值和复杂类型和引用类型是一个东西，下文同意用引用类型表示
+>
+>内存地址=引用地址=地址值=指针，下文统一用引用地址表示
+
+##### 4.1.1.动态属性
+
+**知识点3：**引用类型可以随时添加、修改和删除其属性和方法，而基本数据类型不能有属性，尽管尝试给原始值添加属性不会报错：
+
+```
+// 引用类型
+let person = new Object();
+person.name = "Nicholas";
+console.log(person.name); // "Nicholas"
+// 基本类型
+let name = "Nicholas";
+name.age = 27;
+console.log(name.age); // undefined
+```
+
+**知识点4：**使用 new 关键字创建基本类型，则JavaScript 会创建一个 Object 类型的实例，但其行为类似原始值：
+
+```
+let name1 = "Nicholas";
+let name2 = new String("Matt");
+name1.age = 27;
+name2.age = 26;
+console.log(name1.age); // undefined
+console.log(name2.age); // 26
+console.log(typeof name1); // string
+console.log(typeof name2); // object
+```
+
+>应避免使用new创建基本类型，其表现形式会与真正的基本类型产生矛盾
+
+##### 4.1.2.复制值
+
+**知识点5：**基本类型和引用类型通过变量复制值时有所不同。基本类型的变量在相互赋值的时候，实际上复制的直接是存储的值，而引用类型复制的则是引用地址，这个引用地址指向堆内存中真正的实体
+
+![](https://imgkr2.cn-bj.ufileos.com/b9f3a043-9f5f-444e-b894-298e3a68a882.png?UCloudPublicKey=TOKEN_8d8b72be-579a-4e83-bfd0-5f6ce1546f13&Signature=A0VOQPl3W7pr0VyvQBavCCkshwM%253D&Expires=1608967393)
+
+##### 4.1.3.传递参数
+
+**知识点6：**ECMAScript 中所有函数的参数都是按值传递的。在按值传递参数时，值会被复制到一个局部变量（即一个命名参数，或者用 ECMAScript 的话说，就是 arguments 对象中的一个槽位）:
+
+```
+function addTen(num) {
+    num += 10;
+    return num;
+}
+let count = 20;
+let result = addTen(count);
+console.log(count); // 20，没有变化
+console.log(result); // 30
+/* ----------------------addTen相当于------------------------- */
+function addTen(num) {
+	var num = num // 创建一个局部变量并将参数赋值给这个局部变量
+	num += 10
+	return num;
+}
+```
+
+**知识点7：**引用类型传递参数也是按值传递的，只不过传递的是在栈内存中保存的引用地址，所以在函数内部影响了函数外部的对象，是因为外部的变量传递引用地址给函数内部的变量，使得两个变量保存的引用地址都是指向同一个堆内存的对象实体，所以会产生影响：
+
+```
+function setName(obj) {
+	obj.name = "Nicholas";
+}
+let person = new Object();
+setName(person);
+console.log(person.name); // "Nicholas"
+```
+
+为了进一步证明引用类型传递参数也是按值传递的，看以下示例：
+
+```
+function setName(obj) {
+    obj.name = "Nicholas";
+    obj = new Object();
+    obj.name = "Greg";
+}
+let person = new Object();
+setName(person);
+console.log(person.name); // "Nicholas"
+```
+
+* 假如是按引用传递，那obj实际上可以理解为就是内存中的对象实体，那么在`obj = new Object()` 的时候，外部的person所指向的对象实体也被改变了，但实际上obj后面新建的对象和person所指向的对象是独立的。
+
+##### 4.1.4.确定类型
+
+**知识点8：**typeof 虽然对原始值很有用，但它对引用值的用处不大。ECMAScript 提供了 instanceof 操作符，语法如下：
+
+`result = variable instanceof constructor`
+
+* 如果变量是给定引用类型（由其原型链决定，将在第 8 章详细介绍）的实例，则 instanceof 操作
+  符返回 true
+* 按照定义，所有引用值都是 Object 的实例，因此通过 instanceof 操作符检测任何引用值和
+  Object 构造函数都会返回 true 。类似地，如果用 instanceof 检测原始值，则始终会返回 false ，
+  因为原始值不是对象。
+
+#### 4.2.执行上下文与作用域
+
+**知识点1：**执行上下文分为全局执行上下文和函数执行上下文( eval() 调用内部存在第三种上下文)，每个上下文都有一个关联的变量对象（variable object），而这个上下文中定义的所有变量和函数都存在于这个对象上
+
+**知识点2（全局上下文）：**全局上下文是最外层的上下文。根据 ECMAScript实现的宿主环境，表示全局上下文的对象可能不一样。在浏览器中，全局上下文就是我们常说的 window 对象（第 12章会详细介绍），因此所有通过 var 定义的全局变量和函数都会成为 window 对象的属性和方法。使用 let 和 const 的顶级声明不会定义在全局上下文中，但在作用域链解析上效果是一样的。上下文在其所有代码都执行完毕后会被销毁，包括定义在它上面的所有变量和函数（全局上下文在应用程序退出前才会被销毁，比如关闭网页或退出浏览器）。
+
+**知识点3（函数上下文）：**函数上下文在函数调用的时候创建并被推到一个上下文栈上。在函数执行完之后，上下文栈会弹出该函数上下文，将控制权返还给之前的执行上下文。ECMAScript程序的执行流就是通过这个上下文栈进行控制的
+
+>函数上下文=局部上下文
+
+**知识点4（作用域链）：**创建执行上下文的时候，会创建变量对象的一个作用域链（scope chain），这个作用域链决定了各级上下文中的代码在访问变量和函数时的顺序。代码正在执行的上下文的变量对象始终位于作用域链的最前端。在创建函数上下文的过程中，变量对象会被激活为活动对象（activation object）。活动对象最初只有一个定义变量： arguments 。（全局上下文中没有这个变量。）作用域链中的下一个变量对象来自包含上下文，再下一个对象来自再下一个包含上下文。以此类推直至全局上下文；全局上下文的变量对象始终是作用域链的最后一个变量对象。代码执行时的标识符解析是通过沿作用域链逐级搜索标识符名称完成的。搜索过程始终从作：
+
+```
+var color = "blue";
+function changeColor() {
+    if (color === "blue") {
+    	color = "red"; // 改变了全局上下文的color
+    } else {
+    	color = "blue";
+    }
+}
+changeColor()
+console.log(color); // "red" 
+```
+
+* 对这个例子而言，函数 changeColor() 的作用域链包含两个对象：一个是它自己的变量对象（就是定义 arguments 对象的那个），另一个是全局上下文的变量对象。这个函数内部之所以能够访问变量color ，就是因为可以在作用域链中找到它
+
+>函数参数被认为是当前上下文中的变量，因此也跟上下文中的其他变量遵循相同的访问规则
+
+##### 4.2.1.作用域链增强（略）
+
+##### 4.2.2.变量声明
+
+**知识点5：**var，let，const区别：
+
+* var声明的变量存在变量提升，let，const虽然也有提升，但是由于暂时性死区的概念，在声明之前访问会报错
+* var可以重复声明，let，const不可以，重复的 var 声明会被忽略，而重复的 let 声明会抛出 SyntaxError 
+* var声明的全局变量会挂载在window上，let，const不会
+* var没有块级作用域的概念，let，const有
+* const声明的同时必须赋值
+* const声明的值不能修改
+
+>块级作用域包含if 块、 while 块、 function 块，甚至连单独的块
+
+**标识符(变量名)查找**
+
+**知识点6：**使用块级作用域声明并不会改变搜索流程，但可以给词法层级添加额外的层次：
+
+```
+var color = 'blue';
+function getColor() {
+    let color = 'red';
+    {
+    	let color = 'green';
+    	return color;
+    }
+}
+console.log(getColor()); // 'green'
+```
+
+* 在局部变量 color 声明之后的任何代码都无法访问全局变量color ，除非使用完全限定的写法 window.color
+
+#### 4.3.垃圾回收
+
+
+
+
+
+****
 
 ### 第八章 对象、类与面向对象编程
 

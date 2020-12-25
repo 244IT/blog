@@ -484,6 +484,30 @@ SELECT * FROM `products` LIMIT 20 OFFSET 20;
 SELECT * FROM `products` LIMIT 40, 20;
 ```
 
+## 5.函数
+
+### 5.1.聚合函数
+
+聚合函数表示对值集合进行操作的组（集合）函数：
+
+
+
+```
+# 华为手机价格的平均值
+SELECT AVG(price) FROM `products` WHERE brand = '华为';
+# 计算所有手机的平均分
+SELECT AVG(score) FROM `products`;
+# 手机中最低和最高分数
+SELECT MAX(score) FROM `products`;
+SELECT MIN(score) FROM `products`;
+# 计算总投票人数
+SELECT SUM(voteCnt) FROM `products`;
+# 计算所有条目的数量
+SELECT COUNT(*) FROM `products`;
+# 华为手机的个数
+SELECT COUNT(*) FROM `products` WHERE brand = '华为';
+```
+
 
 
 
