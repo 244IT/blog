@@ -327,14 +327,20 @@ SHOW CREATE TABLE `student`
 6. 修改表：
 
 * 修改表的名字：`ALTER TABLE tbl_name RENAME TO new_tbl_name`
-
 * 添加一个新的列：`ALTER TABLE tbl_name ADD column_name data_type`
 * 修改字段的名称：`ALTER TABLE tbl_name CHANGE old_column_name new_column_name data_type`
-
 * 修改字段类型：`ALTER TABLE tbl_name MODIFY column_name new_data_type`
 * 删除某一个字符：`ALTER TABLE tbl_name DROP column_name`
 * 根据一个表结构去创建另外一张表：`CREATE TABLE new_tbl_name LIKE tbl_name`
 * 根据另外一个表的所有内容，创建一个新的表：`CREATE TABLE new_table_name (SELECT * FROM tbl_name)`
+
+
+
+
+
+### DQL语句
+
+
 
 1.下载免安装版
 
