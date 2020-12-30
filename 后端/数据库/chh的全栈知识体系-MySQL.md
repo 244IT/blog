@@ -484,7 +484,70 @@ SELECT * FROM `products` LIMIT 20 OFFSET 20;
 SELECT * FROM `products` LIMIT 40, 20;
 ```
 
-## 5.多表查询
+#### 6.分组查询(GROUP BY)
+
+GROUP BY通常和聚合函数一起使用，表示我们先对数据进行分组，再对每一组数据，进行聚合函数的计算
+
+需求：根据品牌进行分组；计算各个品牌中：商品的个数、平均价格，也包括：最高价格、最低价格、平均评分；
+
+```
+SELECT brand,
+COUNT(*) as count,
+AVG(price) as avgPrice,
+MAX(price) as maxPrice,
+MIN(price) as minPrice,
+AVG(score) as avgScore
+FROM `products` GROUP BY brand;
+```
+
+**分组约束**
+
+使用我们希望给Group By查询到的结果添加一些约束，那么我们可以使用：HAVING。
+比如：如果我们还希望在分组后的基础上筛选出平均价格在4000以下，并且平均分在7以上的品牌
+
+```
+SELECT brand,
+COUNT(*) as count,
+ROUND(AVG(price),2) as avgPrice,
+MAX(price) as maxPrice,
+MIN(price) as minPrice,
+AVG(score) as avgScore
+FROM `products` GROUP BY brand
+HAVING avgPrice < 4000 and avgScore > 7;
+```
+
+## 5.多表操作
+
+#### 5.1.多表设计-外键(GROUP BY)
+
+假如我们的下面的商品表中，对应的品牌还需要包含其他的信息：
+
+* 比如品牌的官网，品牌的世界排名，品牌的市值等等；
+
+如果我们直接在商品中去体现品牌相关的信息，会存在一些问题：
+
+* 一方面，products表中应该表示的都是商品相关的数据，应该又另外一张表来表示brand的数据；
+* 另一方面，多个商品使用的品牌是一致时，会存在大量的冗余数据；
+
+![](https://imgkr2.cn-bj.ufileos.com/7907acf9-a564-48c4-9cec-acab4c82ee86.png?UCloudPublicKey=TOKEN_8d8b72be-579a-4e83-bfd0-5f6ce1546f13&Signature=R%252FVOEGQntfcjcVx8IsRMG%252FE%252FMZs%253D&Expires=1609408836)
+
+所以，我们可以将所有的批评数据，单独放到一张表中，创建一张品牌的表并插入模拟数据：
+
+```
+CREATE TABLE IF NOT EXISTS `brand`(
+id INT PRIMARY KEY AUTO_INCREMENT,
+name VARCHAR(20) NOT NULL,
+website VARCHAR(100),
+worldRank INT
+);
+
+INSERT INTO `brand` (name, website, worldRank) VALUES ('华为', 'www.huawei.com', 1);
+INSERT INTO `brand` (name, website, worldRank) VALUES ('小米', 'www.mi.com', 10);
+INSERT INTO `brand` (name, website, worldRank) VALUES ('苹果', 'www.apple.com', 5);
+INSERT INTO `brand` (name, website, worldRank) VALUES ('oppo', 'www.oppo.com', 15);
+INSERT INTO `brand` (name, website, worldRank) VALUES ('京东', 'www.jd.com', 3);
+INSERT INTO `brand` (name, website, worldRank) VALUES ('Google', 'www.google.com', 8);
+```
 
 
 
