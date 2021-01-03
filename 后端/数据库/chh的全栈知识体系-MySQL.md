@@ -535,10 +535,10 @@ HAVING avgPrice < 4000 and avgScore > 7;
 
 ```
 CREATE TABLE IF NOT EXISTS `brand`(
-id INT PRIMARY KEY AUTO_INCREMENT,
-name VARCHAR(20) NOT NULL,
-website VARCHAR(100),
-worldRank INT
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(20) NOT NULL,
+    website VARCHAR(100),
+    worldRank INT
 );
 
 INSERT INTO `brand` (name, website, worldRank) VALUES ('华为', 'www.huawei.com', 1);
@@ -549,7 +549,107 @@ INSERT INTO `brand` (name, website, worldRank) VALUES ('京东', 'www.jd.com', 3
 INSERT INTO `brand` (name, website, worldRank) VALUES ('Google', 'www.google.com', 8);
 ```
 
+**添加外键**
 
+新表：在创建表的()最后添加如下语句`FOREIGN KEY (brand_id) REFERENCES brand(id)`
+
+已有表：`ALTER TABLE products ADD FOREIGN KEY (brand_id) REFERENCES brand(id);`
+
+**修改外键的action**
+
+1. 显示创建表的语句：`SHOW CREATE TABLE 表名`
+2. 删除原来的外键（只是把外键关系删除）：`ALTER TABLE products DROP FOREIGH KEY 1查询出来的外键名`
+3. 添加新的外键并设置action：`ALTER TABLE products ADD FRORIGN KEY (brand_id) REFERENCES brand(id) ON UPDATE CASCADE ON DELETE RESTRICT` 
+
+#### 5.2.笛卡尔乘积
+
+如果我们希望查询到产品的同时，显示对应的品牌相关的信息，因为数据是存放在两张表中，所以这个时候就需要
+
+进行多表查询。如果我们直接通过查询语句希望在多张表中查询到数据，这个时候是什么效果呢？
+
+`SELECT * FROM products brand;`
+
+我们会发现一共有648条数据，这个数据量是如何得到的呢？
+
+* 第一张表的108条 * 第二张表的6条数据；
+
+* 也就是说第一张表中每一个条数据，都会和第二张表中的每一条数据结合一次； 
+
+* 这个结果我们称之为 **笛卡尔乘积**，也称之为直积，表示为 X*Y； 
+
+但是事实上很多的数据是没有意义的，比如华为和苹果、小米的品牌结合起来的数据就是没有意义的，我们可不可
+
+以进行筛选呢？
+
+* 使用where来进行筛选；
+
+* 这个表示查询到笛卡尔乘积后的结果中，符合products.brand_id = brand.id条件的数据过滤出来；
+
+`SELECT * FROM products, brand WHERE products.brand_id = brand.id;`
+
+#### 5.3.连接
+
+**左连接**
+
+如果我们希望获取到的是左边所有的数据（以左表为主）：
+
+* 这个时候就表示无论左边的表是否有对应的brand_id的值对应右边表的id，左边的数据都会被查询出来；
+
+* 这个也是开发中使用最多的情况，它的完整写法是LEFT [OUTER] JOIN，但是OUTER可以省略的；
+
+`SELECT * FROM products LEFT JOIN brand ON products.brand_id = brand.id;`
+
+`SELECT * FROM products LEFT JOIN brand ON products.brand_id = brand.id WHERE brand.id IS NULL;`
+
+**右连接**
+
+如果我们希望获取到的是右边所有的数据（以由表为主）：
+
+* 这个时候就表示无论左边的表中的brand_id是否有和右边表中的id对应，右边的数据都会被查询出来；
+
+* 右连接在开发中没有左连接常用，它的完整写法是RIGHT [OUTER] JOIN，但是OUTER可以省略的；
+
+`SELECT * FROM products RIGHT JOIN brand  ON products.brand_id = brand.id;`
+
+`SELECT * FROM products RIGHT JOIN brand ON products.brand_id = brand.id WHERE brand.id IS NULL;`
+
+**内连接**
+
+事实上内连接是表示左边的表和右边的表都有对应的数据关联：
+
+* 内连接在开发中偶尔也会常见使用，看自己的场景。 
+
+* 内连接有其他的写法：CROSS JOIN或者 JOIN都可以；
+
+`SELECT * FROM products INNER JOIN brand  ON products.brand_id = brand.id;`
+
+* 我们会发现它和之前的下面写法是一样的效果：
+
+`SELECT * FROM products, brand WHERE products.brand_id = brand.id;`
+
+* 但是他们代表的含义并不相同： 
+
+* SQL语句一：内连接，代表的是在两张表连接时就会约束数据之间的关系，来决定之后查询的结果；
+
+* SQL语句二：where条件，代表的是先计算出笛卡尔乘积，在笛卡尔乘积的数据基础之上进行where条件的帅
+
+选；
+
+**全连接**
+
+SQL规范中全连接是使用FULL JOIN，但是MySQL中并没有对它的支持，我们需要使用 UNION 来实现：
+
+```
+(SELECT * FROM `products` LEFT JOIN `brand` ON `products`.brand_id = `brand`.id)
+UNION
+(SELECT * FROM `products` RIGHT JOIN `brand` ON `products`.brand_id = `brand`.id);
+```
+
+```
+(SELECT * FROM `products` LEFT JOIN `brand` ON `products`.brand_id = `brand`.id WHERE `brand`.id IS NULL)
+UNION
+(SELECT * FROM `products` RIGHT JOIN `brand` ON `products`.brand_id = `brand`.id WHERE `products`.id IS NULL);
+```
 
 ## 6.函数
 
