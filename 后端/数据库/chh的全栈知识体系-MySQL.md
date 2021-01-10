@@ -316,6 +316,8 @@ CREATE TABLE IF NOT EXISTS user (
 )
 ```
 
+4. 删除数据表：`DROP TABLE tbl_bane`
+
 5. 查看创建表结构时的语句：`SHOW CREATE TABLE tbl_name`
 
 demo：查看创建`student`表时的sql语句
@@ -407,8 +409,6 @@ const connection = mysql.createConnection({
     connection.query(statement, phone);
 }
 ```
-
-
 
 #### 1. 基本查询
 
@@ -650,6 +650,10 @@ UNION
 UNION
 (SELECT * FROM `products` RIGHT JOIN `brand` ON `products`.brand_id = `brand`.id WHERE `products`.id IS NULL);
 ```
+
+#### 5.4.多对多
+
+
 
 ## 6.函数
 
