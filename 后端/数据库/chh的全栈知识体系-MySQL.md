@@ -651,10 +651,39 @@ UNION
 (SELECT * FROM `products` RIGHT JOIN `brand` ON `products`.brand_id = `brand`.id WHERE `products`.id IS NULL);
 ```
 
-#### 5.4.多对多
+#### 5.4.查询结果处理
 
+**01.转对象**
 
+`JSON_OBJECT(KEY, VBALUE...)`
 
+查询手机信息及品牌信息，将品牌信息转对象存储
+
+```
+SELECT products.id as id, products.title as title, products.price as price, products.score as score,
+JSON_OBJECT('id', brand.id, 'name', brand.name, 'rank', brand.phoneRank, 'website', brand.website) as brand
+FROM products LEFT JOIN brand ON products.brand_id = brand.id;
+```
+
+**02.转数组**
+
+`JSON_ARRAY(VALUE1, VALUE2...)`
+
+**03.转数组（内存对象）**
+
+`JSON_ARRAYAGG(JSON_OBJECT(KEY, VBALUE...))`
+
+查询所有学生的选课情况，多课程用数组项展示
+
+```
+SELECT stu.id stuId, stu.name stuName, stu.age stuAge, JSON_ARRAYAGG(JSON_OBJECT('csId', cs.id, 'csName',cs.name,'csPrice', cs.price))
+FROM students stu
+LEFT JOIN students_select_courses ssc 
+ON stu.id = ssc.student_id
+LEFT JOIN courses cs
+ON ssc.course_id = cs.id
+GROUP BY stu.name;
+```
 ## 6.函数
 
 ### 5.1.聚合函数
@@ -681,8 +710,6 @@ SELECT COUNT(price) FROM `products`;
 SELECT COUNT(DISTINCT price) FROM `products`;
 ```
 
-
-
 1.下载免安装版
 
 **2.执行以下步骤**
@@ -695,5 +722,130 @@ SELECT COUNT(DISTINCT price) FROM `products`;
 
 * alter user 'root'@'localhost' identified by '新密码'
 
+## 7.邂逅mysql2
 
+### 7.1.认识mysql2
+
+通常我们的很多操作都是在GUI工具中，通过执行SQL语句来获取结果的，那真实开发中肯定是通过代码来完成所有的操作的。
+那么如何可以在Node的代码中执行SQL语句来，这里我们可以借助于两个库：
+
+* mysql：最早的Node连接MySQL的数据库驱动；
+* mysql2：在mysql的基础之上，进行了很多的优化、改进；
+
+目前相对来说，我更偏向于使用mysql2，mysql2兼容mysql的API，并且提供了一些附加功能
+
+* 更快/更好的性能；
+* Prepared Statement（预编译语句）：
+  * 提高性能：将创建的语句模块发送给MySQL，然后MySQL编译（解析、优化、转换）语句模块，并且存储它但是不执行，之
+    后我们在真正执行时会给?提供实际的参数才会执行；就算多次执行，也只会编译一次，所以性能是更高的；
+  * 防止SQL注入：之后传入的值不会像模块引擎那样就编译，那么一些SQL注入的内容不会被执行；or 1 = 1不会被执行；
+  * 支持Promise，所以我们可以使用async和await语法
+  * 等等....
+
+### 7.2.mysql2的基本使用
+
+ mysql2的使用过程如下：
+
+* 第一步：创建连接（通过createConnection），并且获取连接对象；
+* 第二步：执行SQL语句即可（通过query）；
+
+``` 
+const mysql = require('mysql2')
+
+const connections = mysql.createConnection({
+	host: 'localhost',
+	port: 3306,
+	database: 'coderwhy',
+	user: 'root',
+	password: 'chh6666.'
+})
+
+const statement = `
+	SELECT * FROM products WHERE price > 7000
+`
+connections.query(statement, (err, result, field) => {
+	console.log(result)
+	connections.end()
+})
+```
+
+* host：主机名
+* port：端口
+* database：数据库名
+* user：用户名
+* password：密码
+* createConnection：创建连接
+* query函数：接受两个参数，1：sql语句，2：回调函数
+
+### 7.3.预处理语句
+
+Prepared Statement（预编译语句）：
+
+* 提高性能：将创建的语句模块发送给MySQL，然后MySQL编译（解析、优化、转换）语句模块，并且存储
+  它但是不执行，之后我们在真正执行时会给?提供实际的参数才会执行；就算多次执行，也只会编译一次，所
+  以性能是更高的；
+* 防止SQL注入：之后传入的值不会像模块引擎那样就编译，那么一些SQL注入的内容不会被执行；or 1 = 1不
+  会被执行；
+
+```
+const mysql = require('mysql2')
+
+const connections = mysql.createConnection({
+	host: 'localhost',
+	port: 3306,
+	database: 'coderwhy',
+	user: 'root',
+	password: 'chh6666.'
+})
+
+const statement = `
+	SELECT * FROM products WHERE price > ? AND brand = ?
+`
+connections.execute(statement, [7000, '华为'], (err, result, field) => {
+	console.log(result)
+	connections.end()
+})
+```
+
+>如果再次执行该语句，它将会从LRU（Least Recently Used） Cache中获取获取，省略了编译statement
+>的时间来提高性能。
+
+### 7.4.连接池的使用
+
+前面我们是创建了一个连接（connection），但是如果我们有多个请求的话，该连接很有可能正在被占用，那么
+我们是否需要每次一个请求都去创建一个新的连接呢？
+
+* 事实上，mysql2给我们提供了连接池（connection pools）；
+* 连接池可以在需要的时候自动创建连接，并且创建的连接不会被销毁，会放到连接池中，后续可以继续使用；
+* 我们可以在创建连接池的时候设置LIMIT，也就是最大创建个数；
+
+```
+const mysql = require('mysql2')
+
+const connections = mysql.createPool({
+	host: 'localhost',
+	port: 3306,
+	database: 'coderwhy',
+	user: 'root',
+	password: 'chh6666.',
+	connectionLimit: 10
+})
+
+const statement = `
+	SELECT * FROM products WHERE price > ? AND brand = ?
+`
+connections.execute(statement, [7000, '华为'], (err, result, field) => {
+	console.log(result)
+	connections.end()
+})
+```
+
+### 7.5.promise的方式
+
+```
+connections.promise().execute(statement, [7000, '华为']).then(([result]) => {
+    console.log(result)
+    connections.end()
+})
+```
 
