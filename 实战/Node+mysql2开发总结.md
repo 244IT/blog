@@ -14,6 +14,7 @@
   * controller：控制器
   * middleware：中间件
   * router：路由相关
+    * index.js：入口文件，配置路由的动态加载
   * service：数据库操作相关
   * utils：工具类
   * main: 项目入口
@@ -27,7 +28,8 @@
 * koa-router
 * koa-bodyparser
 * mysql2
-* nodemon
+* jsonwebtoken：使用jwt实现token机制
+* nodemon：生产依赖
 * dotenv：将配置文件加载到环境变量中
 
 ### 1.3.使用dotenv管理配置信息
@@ -276,6 +278,33 @@ const errorHandle = require('./app/error-handle')
 app.on('error', errorHandle)
 ```
 
+### 1.7.动态加载路由
+
+1. 在`router`文件夹下新增`index.js`文件
+
+```
+const fs = require('fs')
+
+/* 路由动态加载 */
+const useRoutes = (app) => {
+    fs.readdirSync(__dirname).forEach(file => {
+        if(file === 'index.js') return
+        const router = require(`./${file}`)
+        app.use(router.routes())
+        app.use(router.allowedMethods())
+    })
+}
+
+module.exports = useRoutes
+```
+
+2. 在`main.js`中使用
+
+```
+const useRoutes = require('./router/index')
+useRoutes(app)
+```
+
 ## 02.用户接口
 
 ### 2.1.用户注册接口
@@ -418,6 +447,159 @@ switch(error.message) {
     message = 'NOT FOUNT';
 }
 ```
+
+#### 2.生成token令牌
+
+**使用openssl生成私钥和公钥**
+
+1. 打开`git.bush`输入`openssl`
+2. `genrsa -out private.key 1024`生成私钥
+3. `rsa -in private.key -pubout -out public.key`生成公钥
+
+**配置私钥和公钥**
+
+`app/config.js`
+
+```
+const fs = require('fs')
+const path = require('path')
+
+const PRIVATE_KEY = fs.readFileSync(path.resolve(__dirname, './keys/private.key'))
+const PUBLIC_KEY = fs.readFileSync(path.resolve(__dirname, './keys/public.key'))
+
+
+module.exports.PRIVATE_KEY = PRIVATE_KEY
+module.exports.PUBLIC_KEY = PUBLIC_KEY
+```
+
+**使用jsonwebtoken生成token**
+
+1. 安装`jsonwebtoken`
+2. 在校验中间件中返回数据库中的用户信息
+
+`auth.middleware.js`(代码片段)
+
+```
+// 判断密码是否错误
+if(md5password(password) !== user.password) {
+    const error = new Error(errorType.PASSWORD_ERROR)
+    return ctx.app.emit('error', error, ctx)
+}
+
+ctx.user = user
+
+await next()
+```
+
+3. 在登录逻辑中添加生成token
+
+`auth.controller.js`
+
+```
+const jwt = require('jsonwebtoken')
+const { PRIVATE_KEY } = require('../app/config')
+
+class AuthController{
+  /* 用户登录控制层函数 */
+  async login(ctx, next) {
+    console.log(ctx.user)
+    const { name, id } = ctx.user
+    const token = jwt.sign({id, name}, PRIVATE_KEY, {
+      expiresIn: 60 * 60 * 24, // 过期时间
+      algorithm: 'RS256' // 使用的算法
+    })
+    ctx.body = {
+      id,
+      name,
+      token
+    }
+  }
+}
+
+module.exports = new AuthController()
+```
+
+#### 3.用户登录验证
+
+1. 在`router/user.auth.js`新增一个test路由，用于验证token是否有效，以备在后面接口中有需要验证token的接口
+
+```
+/* 用户登录验证 */
+authRouter.get('/test', verifyAuth, success)
+```
+
+2. 在`auth.middleware.js`中编写中间件
+
+```
+const jwt = require('jsonwebtoken')
+
+const errorType = require('../constants/error-types')
+const { PUBLIC_KEY } = require('../app/config')
+
+/* 登录验证 */
+const verifyAuth = async (ctx, next) => {
+  console.log('验证登录的middleware')
+  // 获取token
+  const authorization = ctx.header.authorization
+  const token = authorization.replace('Bearer ', '')
+  console.log(token)
+  // 验证token
+  try {
+    const result = jwt.verify(token, PUBLIC_KEY, {
+      algorithms: ['RS256']
+    })
+    ctx.user = result
+    await next()
+  } catch(err) {
+    const error = new Error(errorType.UNAUTHORIZATION)
+    ctx.app.emit('error', error, ctx)
+  }
+}
+
+module.exports = {
+  verifyAuth
+}
+```
+
+3. 新增错误处理(代码片段)
+
+```
+const UNAUTHORIZATION = 'unauthorization'
+
+module.exports = {
+  UNAUTHORIZATION
+}
+```
+
+```
+const errorHandle = (error, ctx) => {
+  console.log('进入错误分类处理')
+  let status, message
+  switch(error.message) {
+	...
+    case errorType.UNAUTHORIZATION:
+      status = 401;
+      message = '未授权token~';
+      break;
+    default: 
+      status = 404;
+      message = 'NOT FOUNT';
+  }
+  ctx.status = status
+  ctx.body = message
+}
+```
+
+4. 在`postman`中添加脚本方便token的校验，在登录接口的Test中添加脚本
+
+```
+const res = pm.response.json();
+pm.globals.set("token", res.token);
+```
+
+* 然后在登录验证的`Bearer Token`内容中添加`{{token}}`即可
+
+## 03.动态接口
 
 
 
