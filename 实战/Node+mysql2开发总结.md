@@ -601,5 +601,100 @@ pm.globals.set("token", res.token);
 
 ## 03.动态接口
 
+创建动态表
+
+```
+CREATE TABLE `moment` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `content` varchar(1000) NOT NULL,
+  `user_id` int NOT NULL,
+  `createAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updateAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `moment_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+)
+```
+
+### 3.1.新增动态
+
+1. 新增路由，新增动态需要token权限
+
+```
+const { create } = require('../controller/moment.controller.js')
+const { verifyAuth } = require('../middleware/auth.middleware')
+
+router.post('/create', verifyAuth, create)
+```
+
+2. 在`moment.controller.js`中编写`create`函数
+
+```
+class MomentController{
+    /* 新增动态 */
+    async create(ctx, next) {
+        // 获取发表动态的用户id和评论内容
+        const { id } = ctx.user
+        const { content } = ctx.request.body
+        // 新增动态（操作数据库）
+        const result = await create(id, content)
+        ctx.body = result
+    }
+}    
+
+module.exports = new MomentController()
+```
+
+### 3.2.查询动态详情
+
+
+
+### 3.3.查询动态列表
+
+### 3.4.修改动态
+
+### 3.5.删除动态
+
+## 04.评论接口
+
+创建评论表：
+
+```
+CREATE TABLE `comment` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `content` varchar(1000) NOT NULL,
+  `moment_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `comment_id` int DEFAULT NULL,
+  `createAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updateAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `moment_id` (`moment_id`),
+  KEY `user_id` (`user_id`),
+  KEY `comment_id` (`comment_id`),
+  CONSTRAINT `comment_ibfk_1` FOREIGN KEY (`moment_id`) REFERENCES `moment` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `comment_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `comment_ibfk_3` FOREIGN KEY (`comment_id`) REFERENCES `comment` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+)
+```
+
+### 4.1.评论动态
+
+### 4.2.回复评论
+
+### 4.3.修改评论
+
+### 4.4.删除评论
+
+### 4.5.获取评论列表
+
+## 05.标签接口
+
+### 5.1.创建标签
+
+### 5.2.给动态添加标签
+
+
+
 
 
