@@ -27,8 +27,10 @@
 * koa
 * koa-router
 * koa-bodyparser
+* koa-multer
 * mysql2
 * jsonwebtoken：使用jwt实现token机制
+* jimp：图片处理库
 * nodemon：生产依赖
 * dotenv：将配置文件加载到环境变量中
 
@@ -647,13 +649,206 @@ module.exports = new MomentController()
 
 ### 3.2.查询动态详情
 
+动态详情接口难度不大，需要前端在params中添加动态的id
+
+在`moment.router.js`中新增获取动态详情的路由
+
+```
+/* 获取动态详情 */
+momentRouter.get('/detail/:id', detail)
+```
+
+`moment.controller.js`
+
+```
+/* 获取动态详情 */
+async detail(ctx, next) {
+    // 获取动态id
+    const { id } = ctx.params
+    // 获取动态详情（操作数据库）
+    const result = await detail(id)
+    ctx.body = result
+}
+```
+
+`moment.service.js`
+
+```
+/* 获取动态详情 */
+async detail(momentId) {
+    console.log(momentId)
+    const statement = `
+        SELECT m.id momentId, m.content, m.updateAt updateTime, m.createAt createTime, 
+            JSON_OBJECT('userId', u.id, 'userName', u.name, 'avatar', u.avatar_url) author,
+            (SELECT JSON_ARRAYAGG(CONCAT('http://localhost:8000/moment/images/', file.filename))
+                FROM file
+                WHERE file.moment_id = m.id
+            ) images,
+            (SELECT JSON_ARRAYAGG(l.name)
+                FROM moment_label ml 
+                LEFT JOIN label l
+                ON ml.label_id = l.id
+                WHERE ml.moment_id = m.id
+            ) labelList
+        FROM moment m
+        LEFT JOIN user u
+        ON m.user_id = u.id
+        WHERE m.id = ?; 
+    `
+    const [[result]] = await connection.execute(statement, [momentId])
+    return result
+}
+```
+
 
 
 ### 3.3.查询动态列表
 
+coderhub首页展示所有动态列表，获取全部动态不需要校验权限：
+
+在`moment.router.js`中新增获取列表的路由
+
+```
+const { list } = require('../controller/moment.controller.js')
+/* 获取动态列表 */
+momentRouter.get('/list', list)
+```
+
+`moment.controller.js`
+
+```
+/* 获取动态列表 */
+async list(ctx, next) {
+	// 获取列表大小和页数
+	const { size, page } = ctx.request.query
+	// 获取动态列表（操作数据库）
+	const result = await list(size, page)
+	ctx.body = result
+}
+```
+
+`moment.service.js`
+
+```
+/* 获取动态列表 */
+async list(size = 10, page = 1) {
+    const offset = (page - 1) * 10
+    const statement = `
+        SELECT m.id momentId, m.content, m.updateAt updateTime, m.createAt createTime, 
+        JSON_OBJECT('userId', u.id, 'userName', u.name, 'avatar', u.avatar_url) author,
+        (SELECT COUNT(*) FROM comment c WHERE c.moment_id = m.id) commentCount,
+        (
+            SELECT JSON_ARRAYAGG(CONCAT('http://localhost:8000/moment/images/', file.filename))
+            FROM file
+            WHERE file.moment_id = m.id
+        ) images
+        FROM moment m
+        LEFT JOIN user u
+        ON m.user_id = u.id
+        LIMIT ?, ?;
+    `
+    const [result] = await connection.execute(statement, [offset, size])
+    return result
+}
+```
+
 ### 3.4.修改动态
 
+修改动态和删除动态都需要以下条件：
+
+* 用户登录
+* 动态是属于此用户的
+
+所以我们要新编写校验用户是否有权限修改此动态资源
+
+`auth.middleware.js`
+
+```
+const AuthService = require('../service/auth.service')
+/* 验证资源修改权限 */
+const verifyPermission = async (ctx, next) => {
+  console.log('验证资源修改的middleware')
+  // 获取要验证的表名和资源id
+  console.log(ctx.params)
+  const [ resourceKey ] = Object.keys(ctx.params)
+  console.log(resourceKey)
+  const tableName = resourceKey.replace('Id', '')
+  const resourceId = ctx.params[resourceKey]
+  // 获取用户的id
+  const { id } = ctx.user
+  // 查询此用户是否有修改的权限
+  try {
+    let result = await AuthService.checkSource(id, resourceId, tableName)
+    console.log(result)
+    if(!result) {
+      throw new Error()
+    }
+    console.log('资源修改验证成功')
+    await next()
+  }catch(err) {
+    const error = new Error(errorType.UNPERMISSION)
+    return ctx.app.emit('error', error, ctx)
+  }
+}
+```
+
+在`auth.service.js`新增checkSource，将指定的用户id和资源id一起传入查询，如果查询到则说明此资源属于该用户
+
+```
+const connection = require('../app/database')
+
+class AuthService{
+  async checkSource(userId, SourceId, tableName) {
+    const statement = `
+      SELECT * FROM ${tableName}
+      WHERE id = ? AND user_id = ?;
+    `
+    const [result] = await connection.execute(statement, [SourceId, userId])
+    return result.length ? true : false
+  }
+}
+
+module.exports = new AuthService()
+```
+
+新增校验资源中间件后又开始做重复的工作了，新增修改动态路由：
+
+`moment.router.js`
+
+```
+momentRouter.patch('/:momentId', verifyAuth, verifyPermission, update)
+```
+
+`moment.controller.js`
+
+```
+/* 修改动态 */
+async update(ctx, next) {
+    // 获取用户id和修改的内容
+    const { content } = ctx.request.body
+    const { momentId } = ctx.params
+    // 修改动态
+    const result = await MomentService.update(momentId, content)
+    ctx.body = result
+}
+```
+
+`moment.service.js`
+
+```
+/* 修改动态 */
+async update(momentId, content) {
+    const statement = `
+        UPDATE moment SET content = ? WHERE id = ?;
+    `
+    const result = await connection.execute(statement, [content, momentId])
+    return result
+}
+```
+
 ### 3.5.删除动态
+
+删除动态的逻辑和修改动态几乎一样，唯一的区别是只需要获取到动态的id删除数据库记录即可
 
 ## 04.评论接口
 
@@ -679,6 +874,49 @@ CREATE TABLE `comment` (
 ```
 
 ### 4.1.评论动态
+
+评论目前是针对某条动态的，所以评论动态需要获取到用户的id，动态的id，评论的id
+
+`comment.router.js`
+
+```
+/* 发表评论接口 */
+commentRouter.post('/', verifyAuth, create)
+```
+
+`comment.controller.js`
+
+```
+class CommentController{
+  /* 发表评论 */
+  async create(ctx, next) {
+    // 获取用户id，动态id，评论内容
+    const { id } = ctx.user
+    const { content, momentId } = ctx.request.body
+
+    // 创建评论
+    const result = await create(id, momentId, content)
+    ctx.body = result
+  }
+} 
+
+module.exports = new CommentController()
+```
+
+`comment.service.js`
+
+```
+/* 创建评论 */
+async create(userId, momentId, content) {
+  const statement = `
+    INSERT INTO comment (content, user_id, moment_id) VALUES (?, ?, ?);
+  `
+  const [result] = await connection.execute(statement, [content, userId, momentId])
+  return result
+}
+```
+
+
 
 ### 4.2.回复评论
 
