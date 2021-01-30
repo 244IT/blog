@@ -916,21 +916,443 @@ async create(userId, momentId, content) {
 }
 ```
 
-
-
 ### 4.2.回复评论
+
+回复评论需要指定动态moment_id，用户user_id，在哪条评论下的回复comment_id，对哪个评论的回复reply_comment_id
+
+首先新增回复路由
+
+```
+/* 回复评论接口 */
+commentRouter.post('/reply/:commentId', verifyAuth, reply)
+```
+
+编写相应的控制器逻辑
+
+```
+/* 回复评论 */
+async reply(ctx, next) {
+  // 获取用户id，动态id，回复评论内容，回复的评论id
+  const { id } = ctx.user
+  const { commentId } = ctx.params
+  const { momentId, content, replyCommentId } = ctx.request.body
+
+  // 创建评论
+  const result = await CommentService.reply(id, momentId, content, commentId, replyCommentId)
+  ctx.body = result
+}
+```
+
+编写数据库逻辑
+
+```
+/* 回复评论 */
+async reply(userId, momentId, content, commentId, replyCommentId) {
+  const statement = `
+    INSERT INTO comment (content, user_id, moment_id, comment_id, reply_comment_id) VALUES (?, ?, ?, ?, ?);
+  `
+  const result = await connection.execute(statement, [content, userId, momentId, commentId, replyCommentId])
+  return result
+}
+```
+
+* 如果只是针对首层评论的回复，只要传首层评论id即可
+* 如果是对二层评论的回复，需要再传一个回复的id
 
 ### 4.3.修改评论
 
+修改评论也需要校验用户对资源的修改权限
+
+`comment.router.js`
+
+```
+// 修改评论
+commentRouter.patch('/:commentId', verifyAuth, verifyPermission, update);
+```
+
+`comment.controller.js`
+
+```
+async update(ctx, next) {
+  const { commentId } = ctx.params;
+  const { content } = ctx.request.body;
+  const result = await service.update(commentId, content);
+  ctx.body = result;
+}
+```
+
+`comment.service.js`
+
+```
+async update(commentId, content) {
+  const statement = `UPDATE comment SET content = ? WHERE id = ?`;
+  const [result] = await connection.execute(statement, [content, commentId]);
+  return result;
+}
+```
+
 ### 4.4.删除评论
+
+删除评论同样需要校验用户对资源的操作权限
+
+`comment.router.js`
+
+```
+// 删除评论
+commentRouter.delete('/:commentId', verifyAuth, verifyPermission, remove);
+```
+
+`comment.controller.js`
+
+```
+async remove(ctx, next) {
+  const { commentId } = ctx.params;
+  const result = await CommentService.remove(commentId);
+  ctx.body = result;
+}
+```
+
+`comment.service.js`
+
+```
+/* 删除评论 */
+async remove(commentId) {
+  console.log(commentId)
+  const statement = `
+    DELETE FROM comment WHERE id = ?
+  `
+  const result = await connection.execute(statement, [commentId])
+  return result
+}
+```
 
 ### 4.5.获取评论列表
 
+`comment.router.js`
+
+```
+// 获取评论列表
+commentRouter.get('/', list);
+```
+
+`comment.controller.js`
+
+```
+async list(ctx, next) {
+  const { momentId } = ctx.query;
+  const result = await service.getCommentsByMomentId(momentId);
+  ctx.body = result;
+}
+```
+
+`comment.service.js`
+
+```
+/* 根据动态id获取评论列表 */
+async getCommentsByMomentId(momentId) {
+  const statement = `
+    SELECT 
+    c.id commentId, content, c.comment_id replyCommentId, c.moment_id momentId, c.createAt replyTime,
+    JSON_OBJECT('id', u.id, 'name', u.name) user,
+    (
+      SELECT 
+      JSON_ARRAYAGG(
+        JSON_OBJECT('commentId', com.id, 'content', com.content, 'replyCommentId', com.comment_id, 'momentId', com.moment_id, 'replyTime', com.createAt, 'user', 
+          JSON_OBJECT('id', usr.id, 'name', usr.name, 'avatar', u.avatar_url), 'replyUser', 
+          (
+            SELECT 
+            JSON_OBJECT('id', rusr.id, 'name', rusr.name, 'avatar', u.avatar_url)
+            FROM comment rcom
+            LEFT JOIN user rusr
+            ON rcom.user_id = rusr.id
+            WHERE rcom.id = com.comment_id
+          )
+        )
+      ) 
+      FROM comment com 
+      LEFT JOIN user usr
+      ON com.user_id = usr.id
+      WHERE com.reply_comment_id = c.id
+    ) replyList
+    FROM comment c
+    LEFT JOIN user u 
+    ON c.user_id = u.id
+    WHERE c.moment_id = ? AND c.comment_id IS NULL; 
+  `
+  const [result] = await connection.execute(statement, [momentId])
+  return result
+}
+```
+
 ## 05.标签接口
+
+创建标签表
+
+```
+CREATE TABLE `label` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(10) NOT NULL,
+  `createAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updateAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+)
+```
 
 ### 5.1.创建标签
 
+`label.router.js`
+
+```
+/* 创建标签接口 */
+labelRouter.post('/', verifyAuth, create)
+```
+
+`label.controller.js`
+
+```
+/* 创建标签 */
+async create(ctx, next) {
+  // 获取创建的标签名
+  const { name } = ctx.request.body
+  ctx.body = '创建标签成功'
+  // 创建标签
+  const result = await create(name)
+  ctx.body = result
+}
+```
+
+`label.service.js`
+
+```
+/* 创建标签 */
+async create(name) {
+  const statement = `
+    INSERT INTO label (name) VALUES (?);
+  `
+  const [result] = await connection.execute(statement, [name])
+  return result
+}
+```
+
 ### 5.2.给动态添加标签
+
+`moment.router.js`
+
+```
+/* 动态添加标签接口 */
+momentRouter.post("/:momentId/labels", verifyAuth, verifyPermission, verifyLabelExist, addLabel)
+```
+
+给动态添加标签需要校验该标签是否存在，如果存在则直接添加，如果不存在则创建该标签
+
+`label.controller.js`
+
+```
+/* 验证标签权限 */
+const verifyLabelExist = async (ctx, next) => {
+  console.log('验证标签的middleware')
+  // 获取标签
+  const { labels } = ctx.request.body
+  // 判断标签是否存在
+  const labelList = []
+  for(let name of labels) {
+    const result = await LabelService.getLabelByName(name)
+    // 不存在标签则创建标签
+    if(!result.length) {
+      const result = await LabelService.create(name)
+      labelList.push({name, id: result.insertId})
+      continue
+    }
+    // 存在标签则直接将标签信息加入数组
+    labelList.push({name, id: result[0].id}) 
+  }
+  ctx.labels = labelList
+
+  await next()
+}
+```
+
+`moment.controller.js`
+
+```
+/* 添加标签 */
+async addLabel(ctx, next) {
+    // 获取动态id和添加的标签id
+    const { momentId } = ctx.params
+    const { labels } = ctx
+    // 获取标签
+    for(let label of labels) {
+        // 如果动态已经有这个标签关系，则跳过
+        const connectionResult = await MomentService.getConnection(momentId, label.id)
+        if(!connectionResult.length) {
+            await MomentService.addConnection(momentId, label.id)
+        }
+
+    }
+    ctx.body = '添加标签成功'
+}
+```
+
+`moment.service.js`
+
+```
+/* 获取动态和标签的关系 */
+async getConnection(momentId, labelId) {
+    const statement = `
+        SELECT * FROM moment_label WHERE moment_id = ? AND label_id = ?
+    `
+    const [result] = await connection.execute(statement, [momentId, labelId])
+    return result
+}
+
+/* 添加动态和标签的关系 */
+async addConnection(momentId, labelId) {
+    const statement = `
+        INSERT INTO moment_label (moment_id, label_id) VALUES (?, ?);
+    `
+    const [result] = await connection.execute(statement, [momentId, labelId])
+    return result
+}
+```
+
+### 5.3.获取标签列表
+
+`label.router.js`
+
+```
+/* 获取标签列表 */
+labelRouter.get('/', list)
+```
+
+`label.controller.js`
+
+```
+/* 获取标签列表 */
+async list(ctx, next) {
+  console.log('获取标签列表')
+  // 获取页数和大小
+  const { size, page } = ctx.request.query
+  // 查询列表
+  const result = await list(size, page)
+  ctx.body = result
+}
+```
+
+`label.service.js`
+
+```
+/* 获取标签列表 */
+async list(size, page) {
+  const offset = (page - 1) * 10
+  const statement = `
+    SELECT * FROM label LIMIT ?, ?;
+  `
+  const [result] = await connection.execute(statement, [offset, size])
+  return result
+}
+```
+
+## 06.文件上传接口
+
+### 6.1.头像上传接口
+
+`file.router.js`
+
+```
+/* 上传用户头像 */
+fileRouter.post('/avatar', verifyAuth, avatarHandle, saveAvatarInfo)
+```
+
+`file.middleware.js`
+
+```
+const Multer = require('koa-multer')
+const { AVATAR_PATH } = require('../constants/file-paths')
+
+/* 头像上传处理 */
+const avatarUpload = Multer({
+  dest: AVATAR_PATH,
+})
+const avatarHandle = avatarUpload.single('avater')
+```
+
+`file.controller.js`
+
+```
+/* 头像上传 */
+async saveAvatarInfo(ctx, next) {
+  const { id } = ctx.user
+  const { mimetype, filename, size } = ctx.req.file
+  // 保存到数据库中
+  await FileService.createAvatar(mimetype, filename, size, id)
+  // 保存到user表中
+  try{
+    const avatarUrl = `${APP_HOST}:${APP_PORT}/user/${id}/avatar`
+    await updateUserAvatar(avatarUrl, id)
+  }catch(err) {
+    console.log(err)
+  }
+  ctx.body = '上传头像成功'
+}
+```
+
+`file.service.js`
+
+```
+/* 保存用户的头像信息 */
+async createAvatar(mimetype, filename, size, userId) {
+  const statement = `
+    INSERT INTO avatar (filename, mimetype, size, user_id) VALUES (?, ?, ?, ?)
+  `
+  const result = await connection.execute(statement, [filename, mimetype, size, userId])
+  return result
+}
+```
+
+### 6.2.获取头像图片
+
+`user.router.js`
+
+```
+/* 获取用户头像 */
+userRouter.get('/:userId/avatar', avatarInfo)
+```
+
+`user.controller.js`
+
+```
+/* 获取头像 */
+async avatarInfo(ctx, next) {
+  console.log('获取用户头像')
+  const { userId } = ctx.params
+  const avatarInfo = await getAvatarByUserId(userId)
+  console.log(avatarInfo)
+  if(!avatarInfo) {
+    const error = new Error()
+    return ctx.app.emit('error', error, ctx)
+  }
+  /* 提供图像信息 */
+  ctx.response.set('content-type', avatarInfo.mimetype)
+  ctx.body = fs.createReadStream(`${AVATAR_PATH}/${avatarInfo.filename}`);
+}
+```
+
+`file.service.js`
+
+```
+/* 获取头像 */
+async getAvatarByUserId(userId) {
+  const statement = `
+    SELECT * FROM avatar WHERE user_id = ?
+  `
+
+  const [[result]] = await connection.execute(statement, [userId])
+  return result
+}
+```
+
+
 
 
 
