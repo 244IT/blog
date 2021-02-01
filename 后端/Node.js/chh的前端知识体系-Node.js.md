@@ -2568,6 +2568,25 @@ npx webpack --version
 
 npx的原理非常简单，它会到当前目录的node_modules/.bin目录下查找对应的命令；
 
+#### 6.2.5.nrm
+
+nrm是npm的镜像源管理工具，很多使用我们使用npm下载国外的源文件速度太慢，可以使用nrm快速地在npm镜像源之间进行切换。
+
+```
+npm install -g nrm
+```
+
+```
+nrm ls // 查看可选源
+nrm test taobao // 测试源响应时间
+nrm use taobeo // 切换源
+nrm add imooc https://xxx // 增加定制源
+nrm del imooc // 删除定制源
+
+```
+
+
+
 ## 07.Buffer的使用
 
 ### 7.1. 认识Buffer
