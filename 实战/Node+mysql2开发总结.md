@@ -11,6 +11,7 @@
     * index.js：主文件
   * constants：常量
     * error-types.js：错误类型
+    * path-types.js：路径配置
   * controller：控制器
   * middleware：中间件
   * router：路由相关
