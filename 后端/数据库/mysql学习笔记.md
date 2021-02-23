@@ -10,7 +10,7 @@
 
 1. 登录： mysql+参数 
    * -D --database = name 打开指定数据库
-   * --delimiter = name 指点分隔符
+   * --delimiter = name 指点分隔符（告诉mysql解释器，该段命令是否已经结束了，默认是分号';'）
    * -h --host = name 服务器名称
    * -p --password [=name] 密码
    * -P --port = # 端口号

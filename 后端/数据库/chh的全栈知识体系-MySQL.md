@@ -14,7 +14,7 @@
 
 * 每个数据库中可以有多张表；
 
-* 每个表中可以有多条数据；
+* 每个表中可以有多条数据（记录）；
 
 ### 1.2.启动和停止MySQL服务
 
@@ -34,16 +34,16 @@
 
 登录： mysql+参数 
 
-* -D --database = name 打开指定数据库
-* --delimiter = name 指点分隔符
-* -h --host = name 服务器名称
+* -D --database[= name] 打开指定数据库
+* --delimiter = name 指点分隔符（告诉mysql解释器，该段命令是否已经结束了，默认是分号';'）
+* -h --host[=name] 服务器名称
 * -p --password [=name] 密码
 * -P --port = # 端口号
 * -u --user = name 用户名
 * -V --version 输出版本信息并退出
 
 ```
-C:\Users\H>mysql -uroot -p -P3306 -hlocalhost
+C:\Users\H>mysql -uroot -p -hlocalhost -P3306 -Dcoderwhy --delimiter.
 Enter password: ****
 Welcome to the MySQL monitor.  Commands end with ; or \g.
 Your MySQL connection id is 3
@@ -58,16 +58,22 @@ mysql>
 
 >通常也使用mysql -uroot -p[密码]更便捷地登录
 
+```
+mysql -uroot -p123456 -P3306 -hlocalhost
+```
+
 **退出**
 
-* mysql > exit;
-* mysql > quit;
+* mysql > exit
+* mysql > quit
 * mysql > \q
 
 ```
 mysql> \q
 Bye
 ```
+
+>退出指令可不加分号
 
 ### 1.4.修改MySQL提示符
 
