@@ -3050,3 +3050,1184 @@ writer.on('close', () => {
 
 ## 08.深入事件循环
 
+> 事件循环是什么？事实上我把事件循环理解成我们编写的JavaScript和浏览器或者Node之间的一个桥梁。
+>
+> 浏览器的事件循环是一个我们编写的JavaScript代码和浏览器API调用(setTimeout/AJAX/监听事件等)的一个桥梁, 桥梁之间他们通过回调函数进行沟通。
+>
+> Node的事件循环是一个我们编写的JavaScript代码和系统调用（file system、network等）之间的一个桥梁, 桥梁之间他们通过回调函数进行沟通的.
+
+### 8.1. 浏览器的事件循环
+
+#### 8.1.1.进程和线程
+
+线程和进程是操作系统中的两个概念：
+
+- 进程（process）：计算机已经运行的程序；
+- 线程（thread）：操作系统能够运行运算调度的最小单位；
+
+听起来很抽象，我们直观一点解释：
+
+- 进程：我们可以认为，启动一个应用程序，就会默认启动一个进程（也可能是多个进程）；
+- 线程：每一个进程中，都会启动一个线程用来执行程序中的代码，这个线程被称之为主线程；
+- 所以我们也可以说进程是线程的容器；
+
+再用一个形象的例子解释：
+
+- 操作系统类似于一个工厂；
+- 工厂中里有很多车间，这个车间就是进程；
+- 每个车间可能有一个以上的工人在工厂，这个工人就是线程；
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXutykVxmqElxsSRqd40pBa9XtUsUn5FSYN6W8GHnyUeVKj5mQBt8e4rOnoZWJE3mIkCL73XDfmsRAA/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)操作系统、线程、进程
+
+操作系统是如何做到同时让多个进程（边听歌、边写代码、边查阅资料）同时工作呢？
+
+- 这是因为CPU的运算速度非常快，它可以快速的在多个进程之间迅速的切换；
+- 当我们的进程中的线程获取获取到时间片时，就可以快速执行我们编写的代码；
+- 对于用于来说是感受不到这种快速的切换的；
+
+你可以在Mac的活动监视器或者Windows的资源管理器中查看到很多进程：
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXutykVxmqElxsSRqd40pBa9XO1TDXZ8GcVxJO1XibKsVsmuWgVIicCeGK487v61ShLCNEkxjwgVGYLmQ/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)活动监视器
+
+#### 8.1.2. 浏览器和JavaScript
+
+我们经常会说JavaScript是单线程的，但是JavaScript的线程应该有自己的容器进程：浏览器或者Node。
+
+浏览器是一个进程吗，它里面只有一个线程吗？
+
+- 目前多数的浏览器其实都是多进程的，当我们打开一个tab页面时就会开启一个新的进程，这是为了防止一个页面卡死而造成所有页面无法响应，整个浏览器需要强制退出；
+- 每个进程中又有很多的线程，其中包括执行JavaScript代码的线程；
+
+但是JavaScript的代码执行是在一个单独的线程中执行的：
+
+- 这就意味着JavaScript的代码，在同一个时刻只能做一件事；
+- 如果这件事是非常耗时的，就意味着当前的线程就会被阻塞；
+
+分析下面代码的执行过程：
+
+- 定义变量name；
+- 执行log函数，函数会被放入到调用栈中执行；
+- 调用bar()函数，被压入到调用栈中，但是执行未结束；
+- bar因为调用了sum，sum函数被压入到调用栈中，获取到结果后出栈；
+- bar获取到结果后出栈，获取到结果result；
+- 将log函数压入到调用栈，log被执行，并且出栈；
+
+```
+const name = "coderwhy";
+
+// 1.将该函数放入到调用栈中被执行
+console.log(name);
+
+// 2. 调用栈
+function sum(num1, num2) {
+  return num1 + num2;
+}
+
+function bar() {
+  return sum(20, 30);
+}
+
+console.log(bar());
+```
+
+#### 8.1.3. 浏览器的事件循环
+
+如果在执行JavaScript代码的过程中，有异步操作呢？
+
+- 中间我们插入了一个setTimeout的函数调用；
+- 这个函数被放到入调用栈中，执行会立即结束，并不会阻塞后续代码的执行；
+
+```
+const name = "coderwhy";
+
+// 1.将该函数放入到调用栈中被执行
+console.log(name);
+
+// 2.调用栈
+function sum(num1, num2) {
+  return num1 + num2;
+}
+
+function bar() {
+  return sum(20, 30);
+}
+
+setTimeout(() => {
+  console.log("settimeout");
+}, 1000);
+
+const result = bar();
+
+console.log(result);
+```
+
+那么，传入的一个函数（比如我们称之为timer函数），会在什么时候被执行呢？
+
+- 事实上，setTimeout是调用了web api，在合适的时机，会将timer函数加入到一个事件队列中；
+- 事件队列中的函数，会被放入到调用栈中，在调用栈中被执行；
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXutykVxmqElxsSRqd40pBa9XicKiaaY5IS7ibrvzWL2g5xMuqBHjIJqml2TOueicHDAMlAmle9T8L9dZAg/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)浏览器的事件循环
+
+#### 8.1.4. 宏任务和微任务
+
+但是事件循环中并非只维护着一个队列，事实上是有两个队列：
+
+- 宏任务队列（macrotask queue）：ajax、setTimeout、setInterval、DOM监听、UI Rendering等
+- 微任务队列（microtask queue）：Promise的then回调、 Mutation Observer API、queueMicrotask()等
+
+那么事件循环对于两个队列的优先级是怎么样的呢？
+
+- 1.main script中的代码优先执行（编写的顶层script代码）；
+
+- 2.在执行任何一个宏任务之前（不是队列，是一个宏任务），都会先查看微任务队列中是否有任务需要执行
+
+- - 也就是宏任务执行之前，必须保证微任务队列是空的；
+  - 如果不为空，那么就优先执行微任务队列中的任务（回调）；
+
+我们来看一个面试题：执行结果如何？
+
+```
+setTimeout(function () {
+  console.log("set1");
+
+  new Promise(function (resolve) {
+    resolve();
+  }).then(function () {
+    new Promise(function (resolve) {
+      resolve();
+    }).then(function () {
+      console.log("then4");
+    });
+    console.log("then2");
+  });
+});
+
+new Promise(function (resolve) {
+  console.log("pr1");
+  resolve();
+}).then(function () {
+  console.log("then1");
+});
+
+setTimeout(function () {
+  console.log("set2");
+});
+
+console.log(2);
+
+queueMicrotask(() => {
+  console.log("queueMicrotask1")
+});
+
+new Promise(function (resolve) {
+  resolve();
+}).then(function () {
+  console.log("then3");
+});
+```
+
+执行结果：
+
+```
+pr1
+2
+then1
+queueMicrotask1
+then3
+set1
+then2
+then4
+set2
+```
+
+async、await是Promise的一个语法糖：
+
+- 我们可以将await关键字后面执行的代码，看做是包裹在`(resolve, reject) => {函数执行}`中的代码；
+- await的下一条语句，可以看做是`then(res => {函数执行})`中的代码；
+
+今日头条的面试题：
+
+```
+async function async1 () {
+  console.log('async1 start')
+  await async2();
+  console.log('async1 end')
+}
+ 
+async function async2 () {
+  console.log('async2')
+}
+
+console.log('script start')
+ 
+setTimeout(function () {
+  console.log('setTimeout')
+}, 0)
+ 
+async1();
+ 
+new Promise (function (resolve) {
+  console.log('promise1')
+  resolve();
+}).then (function () {
+  console.log('promise2')
+})
+
+console.log('script end')
+```
+
+执行结果如下：
+
+```
+script start
+async1 start
+async2
+promise1
+script end
+async1 end
+promise2
+setTimeout
+```
+
+### 8.2.Node的事件循环
+
+#### 8.2.1. Node的事件循环
+
+浏览器中的EventLoop是根据HTML5定义的规范来实现的，不同的浏览器可能会有不同的实现，而Node中是由libuv实现的。
+
+我们来看在很早就给大家展示的Node架构图：
+
+- 我们会发现libuv中主要维护了一个EventLoop和worker threads（线程池）；
+- EventLoop负责调用系统的一些其他操作：文件的IO、Network、child-processes等
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXutykVxmqElxsSRqd40pBa9XmLD9LsQGqIzemGdh5IOTUgR8YibDiciaRFzLdicz8YUkq2BIlSENicJ2Mdg/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)Node的架构图
+
+libuv到底是什么呢？
+
+- libuv is a multi-platform support library with a focus on asynchronous I/O. It was primarily developed for use by Node.js, but it's also used by Luvit, Julia, pyuv, and others.
+- libuv是一个多平台的专注于异步IO的库，它最初是为Node开发的，但是现在也被使用到Luvit、Julia、pyuv等其他地方；
+
+libuv到底帮助我们做了什么事情呢？
+
+- 我们以文件操作为例，来讲解一下它内部的结构；
+
+#### 8.2.2. 阻塞IO和非阻塞IO
+
+如果我们希望在程序中对一个文件进行操作，那么我们就需要打开这个文件：通过文件描述符。
+
+- 我们思考：JavaScript可以直接对一个文件进行操作吗？
+- 看起来是可以的，但是事实上我们任何程序中的文件操作都是需要进行系统调用（操作系统封装了文件系统）；
+- 事实上对文件的操作，是一个操作系统的IO操作（输入、输出）；
+
+操作系统为我们提供了`阻塞式调用`和`非阻塞式调用`：
+
+- **阻塞式调用：** 调用结果返回之前，当前线程处于阻塞态（阻塞态CPU是不会分配时间片的），调用线程只有在得到调用结果之后才会继续执行。
+- **非阻塞式调用：** 调用执行之后，当前线程不会停止执行，只需要过一段时间来检查一下有没有结果返回即可。
+
+所以我们开发中的很多耗时操作，都可以基于这样的 `非阻塞式调用`：
+
+- 比如网络请求本身使用了Socket通信，而Socket本身提供了select模型，可以进行`非阻塞方式的工作`；
+- 比如文件读写的IO操作，我们可以使用操作系统提供的`基于事件的回调机制`；
+
+但是非阻塞IO也会存在一定的问题：我们并没有获取到需要读取（我们以读取为例）的结果
+
+- 那么就意味着为了可以知道是否读取到了完整的数据，我们需要频繁的去确定读取到的数据是否是完整的；
+- 这个过程我们称之为轮训操作；
+
+那么这个轮训的工作由谁来完成呢？
+
+- 如果我们的主线程频繁的去进行轮训的工作，那么必然会大大降低性能；
+- 并且开发中我们可能不只是一个文件的读写，可能是多个文件；
+- 而且可能是多个功能：网络的IO、数据库的IO、子进程调用；
+
+libuv提供了一个线程池（Thread Pool）：
+
+- 线程池会负责所有相关的操作，并且会通过轮训等方式等待结果；
+- 当获取到结果时，就可以将对应的回调放到事件循环（某一个事件队列）中；
+- 事件循环就可以负责接管后续的回调工作，告知JavaScript应用程序执行对应的回调函数；
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXutykVxmqElxsSRqd40pBa9XDt5ov0ibB9QjGI59tGpFyK7uObjfffVTzm6m95Vpv1pLYOBib2iaeNPww/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)Event loop in node.js
+
+阻塞和非阻塞，同步和异步有什么区别？
+
+- 阻塞和非阻塞是对于被调用者来说的；
+
+- - 在我们这里就是系统调用，操作系统为我们提供了阻塞调用和非阻塞调用；
+
+- 同步和异步是对于调用者来说的；
+
+- - 在我们这里就是自己的程序；
+  - 如果我们在发起调用之后，不会进行其他任何的操作，只是等待结果，这个过程就称之为同步调用；
+  - 如果我们再发起调用之后，并不会等待结果，继续完成其他的工作，等到有回调时再去执行，这个过程就是异步调用；
+
+#### 8.2.3. Node事件循环的阶段
+
+我们最前面就强调过，事件循环像是一个桥梁，是连接着应用程序的JavaScript和系统调用之间的通道：
+
+- 无论是我们的文件IO、数据库、网络IO、定时器、子进程，在完成对应的操作后，都会将对应的结果和回调函数放到事件循环（任务队列）中；
+- 事件循环会不断的从任务队列中取出对应的事件（回调函数）来执行；
+
+但是一次完整的事件循环Tick分成很多个阶段：
+
+- **定时器（Timers）**：本阶段执行已经被 `setTimeout()` 和 `setInterval()` 的调度回调函数。
+- **待定回调（Pending Callback）**：对某些系统操作（如TCP错误类型）执行回调，比如TCP连接时接收到ECONNREFUSED。
+- **idle, prepare**：仅系统内部使用。
+- **轮询（Poll）**：检索新的 I/O 事件；执行与 I/O 相关的回调；
+- **检测**：`setImmediate()` 回调函数在这里执行。
+- **关闭的回调函数**：一些关闭的回调函数，如：`socket.on('close', ...)`。
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXutykVxmqElxsSRqd40pBa9XPV1Jwkricj1K4K44U8PQKJCHtC4JgyreAIK9n8icAibPmwQ7BSmY3Mtaw/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)一次tick的事件循环阶段
+
+我们会发现从一次事件循环的Tick来说，Node的事件循环更复杂，它也分为微任务和宏任务：
+
+- 宏任务（macrotask）：setTimeout、setInterval、IO事件、setImmediate、close事件；
+- 微任务（microtask）：Promise的then回调、process.nextTick、queueMicrotask；
+
+但是，Node中的事件循环不只是 `微任务队列`和 `宏任务队列`：
+
+- 微任务队列：
+
+- - next tick queue：process.nextTick；
+  - other queue：Promise的then回调、queueMicrotask；
+
+- 宏任务队列：
+
+- - timer queue：setTimeout、setInterval；
+  - poll queue：IO事件；
+  - check queue：setImmediate；
+  - close queue：close事件；
+
+所以，在每一次事件循环的tick中，会按照如下顺序来执行代码：
+
+- next tick microtask queue；
+- other microtask queue；
+- timer queue；
+- poll queue；
+- check queue；
+- close queue；
+
+#### 8.2.4. Node代码执行面试
+
+面试题一：
+
+```
+async function async1() {
+  console.log('async1 start')
+  await async2()
+  console.log('async1 end')
+}
+
+async function async2() {
+  console.log('async2')
+}
+
+console.log('script start')
+
+setTimeout(function () {
+  console.log('setTimeout0')
+}, 0)
+
+setTimeout(function () {
+  console.log('setTimeout2')
+}, 300)
+
+setImmediate(() => console.log('setImmediate'));
+
+process.nextTick(() => console.log('nextTick1'));
+
+async1();
+
+process.nextTick(() => console.log('nextTick2'));
+
+new Promise(function (resolve) {
+  console.log('promise1')
+  resolve();
+  console.log('promise2')
+}).then(function () {
+  console.log('promise3')
+})
+
+console.log('script end')
+```
+
+执行结果如下：
+
+```
+script start
+async1 start
+async2
+promise1
+promise2
+script end
+nextTick
+async1 end
+promise3
+
+setTimeout0
+setImmediate
+setTimeout2
+```
+
+面试题二：
+
+```
+setTimeout(() => {
+  console.log("setTimeout");
+}, 0);
+
+setImmediate(() => {
+  console.log("setImmediate");
+});
+```
+
+执行结果：
+
+```
+情况一：
+setTimeout
+setImmediate
+
+情况二：
+setImmediate
+setTimeout
+```
+
+为什么会出现不同的情况呢？
+
+- 在Node源码的deps/uv/src/timer.c中141行，有一个 `uv__next_timeout`的函数；
+- 这个函数决定了，poll阶段要不要阻塞在这里；
+- 阻塞在这里的目的是当有异步IO被处理时，尽可能快的让代码被执行；
+
+```
+int uv__next_timeout(const uv_loop_t* loop) {
+  const struct heap_node* heap_node;
+  const uv_timer_t* handle;
+  uint64_t diff;
+
+  // 计算距离当前时间节点最小的计时器
+  heap_node = heap_min(timer_heap(loop));
+  // 如果为空, 那么返回-1,表示为阻塞状态
+  if (heap_node == NULL)
+    return -1; /* block indefinitely */
+
+  // 如果计时器的时间小于当前loop的开始时间, 那么返回0
+  // 继续执行后续阶段, 并且开启下一次tick
+  handle = container_of(heap_node, uv_timer_t, heap_node);
+  if (handle->timeout <= loop->time)
+    return 0;
+
+  // 如果不大于loop的开始时间, 那么会返回时间差
+  diff = handle->timeout - loop->time;
+  if (diff > INT_MAX)
+    diff = INT_MAX;
+
+  return (int) diff;
+}
+```
+
+和上面有什么关系呢？
+
+- 情况一：如果事件循环开启的时间(ms)是小于 `setTimeout`函数的执行时间的；
+
+- - 也就意味着先开启了event-loop，但是这个时候执行到timer阶段，并没有定时器的回调被放到入 timer queue中；
+  - 所以没有被执行，后续开启定时器和检测到有setImmediate时，就会跳过poll阶段，向后继续执行；
+  - 这个时候是先检测 `setImmediate`，第二次的tick中执行了timer中的 `setTimeout`；
+
+- 情况二：如果事件循环开启的时间(ms)是大于 `setTimeout`函数的执行时间的；
+
+- - 这就意味着在第一次 tick中，已经准备好了timer queue；
+  - 所以会直接按照顺序执行即可；
+
+## 09.http开发web服务器
+
+> 什么是Web服务器？
+>
+> 当应用程序（客户端）需要某一个资源时，可以向一个台服务器，通过Http请求获取到这个资源；提供服务器的这个服务器，就是一个Web服务器；
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXuvfXvFoaXOVJ29jk0SkBGbYZYwgaPR9na9Lym9T8nLzn8aiazAgKTX01Vh9MBr7aEohYhaV4THKdeg/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)Web服务器
+
+目前有很多开源的Web服务器：Nginx、Apache（静态）、Apache Tomcat（静态、动态）、Node.js
+
+### 一. Http模板基本使用
+
+#### 1.1. 如何创建服务
+
+##### 1.1.1. Web服务器初体验
+
+创建一个Web服务器的初体验：
+
+```
+const http = require('http');
+
+const HTTP_PORT = 8000;
+
+const server = http.createServer((req, res) => {
+  res.end("Hello World");
+});
+
+server.listen(8000, () => {
+  console.log(`🚀服务器在${HTTP_PORT}启动~`)
+})
+```
+
+##### 1.1.2. 创建服务器
+
+创建服务器对象，我们是通过 `createServer` 来完成的
+
+- `http.createServer`会返回服务器的对象；
+- 底层其实使用直接 new Server 对象。
+
+```
+function createServer(opts, requestListener) {
+  return new Server(opts, requestListener);
+}
+```
+
+那么，当然，我们也可以自己来创建这个对象：
+
+```
+const server2 = new http.Server((req, res) => {
+  res.end("Hello Server2");
+});
+
+server2.listen(9000, () => {
+  console.log("服务器启动成功~");
+})
+```
+
+上面我们已经看到，创建Server时会传入一个回调函数，这个回调函数在被调用时会传入两个参数：
+
+- req：request请求对象，包含请求相关的信息；
+- res：response响应对象，包含我们要发送给客户端的信息；
+
+##### 1.1.3. 监听端口和主机
+
+**Server**通过listen方法来开启服务器，并且在某一个主机和端口上监听网络请求：
+
+- 也就是当我们通过 `ip:port`的方式发送到我们监听的Web服务器上时；
+- 我们就可以对其进行相关的处理；
+
+`listen`函数有三个参数：
+
+- 端口port: 可以不传, 系统会默认分配端, 后续项目中我们会写入到环境变量中；
+
+- 主机host: 通常可以传入localhost、ip地址127.0.0.1、或者ip地址0.0.0.0，默认是0.0.0.0；
+
+- - 监听IPV4上所有的地址，再根据端口找到不同的应用程序；
+  - 比如我们监听 `0.0.0.0`时，在同一个网段下的主机中，通过ip地址是可以访问的；
+  - 正常的数据库包经常 应用层 - 传输层 - 网络层 - 数据链路层 - 物理层 ；
+  - 而回环地址，是在网络层直接就被获取到了，是不会经常数据链路层和物理层的；
+  - 比如我们监听 `127.0.0.1`时，在同一个网段下的主机中，通过ip地址是不能访问的；
+  - localhost：本质上是一个域名，通常情况下会被解析成127.0.0.1；
+  - 127.0.0.1：回环地址（Loop Back Address），表达的意思其实是我们主机自己发出去的包，直接被自己接收；
+  - 0.0.0.0：
+
+- 回调函数：服务器启动成功时的回调函数；
+
+```
+server.listen(() => {
+  console.log("服务器启动~🚀");
+})
+```
+
+#### 1.2. request请求对象
+
+在向服务器发送请求时，我们会携带很多信息，比如：
+
+- 本次请求的URL，服务器需要根据不同的URL进行不同的处理；
+- 本次请求的请求方式，比如GET、POST请求传入的参数和处理的方式是不同的；
+- 本次请求的headers中也会携带一些信息，比如客户端信息、接受数据的格式、支持的编码格式等；
+- 等等...
+
+这些信息，Node会帮助我们封装到一个request的对象中，我们可以直接来处理这个request对象：
+
+```
+const server = http.createServer((req, res) => {
+  // request对象
+  console.log(req.url);
+  console.log(req.method);
+  console.log(req.headers);
+
+  res.end("Hello World");
+});
+```
+
+##### 1.2.1. URL的处理
+
+客户端在发送请求时，会请求不同的数据，那么会传入不同的请求地址：
+
+- 比如 `http://localhost:8000/login`；
+- 比如 `http://localhost:8000/products`;
+
+服务器端需要根据不同的请求地址，作出不同的响应：
+
+```
+const server = http.createServer((req, res) => {
+  const url = req.url;
+  console.log(url);
+
+  if (url === '/login') {
+    res.end("welcome Back~");
+  } else if (url === '/products') {
+    res.end("products");
+  } else {
+    res.end("error message");
+  }
+});
+```
+
+那么如果用户发送的地址中还携带一些额外的参数呢？
+
+- `http://localhost:8000/login?name=why&password=123`;
+- 这个时候，url的值是 `/login?name=why&password=123`；
+
+我们如何对它进行解析呢？
+
+- 使用内置模块url；
+
+```
+const url = require('url');
+
+// 解析请求
+const parseInfo = url.parse(req.url);
+console.log(parseInfo);
+```
+
+解析结果：
+
+```
+Url {
+  protocol: null,
+  slashes: null,
+  auth: null,
+  host: null,
+  port: null,
+  hostname: null,
+  hash: null,
+  search: '?name=why&password=123',
+  query: 'name=why&password=123',
+  pathname: '/login',
+  path: '/login?name=why&password=123',
+  href: '/login?name=why&password=123'
+}
+```
+
+我们会发现 `pathname`就是我们想要的结果。
+
+但是 `query` 信息如何可以获取呢？
+
+- 方式一：截取字符串；
+- 方式二：使用querystring内置模块；
+
+```
+const { pathname, query } = url.parse(req.url);
+const queryObj = qs.parse(query);
+console.log(queryObj.name);
+console.log(queryObj.password);
+```
+
+##### 1.2.2. Method的处理
+
+在Restful规范（设计风格）中，我们对于数据的增删改查应该通过不同的请求方式：
+
+- GET：查询数据；
+- POST：新建数据；
+- PATCH：更新数据；
+- DELETE：删除数据；
+
+所以，我们可以通过判断不同的请求方式进行不同的处理。
+
+比如创建一个用户：
+
+- 请求接口为 `/users`；
+- 请求方式为 `POST`请求；
+- 携带数据 `username`和`password`；
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXuvfXvFoaXOVJ29jk0SkBGbYIR7ichuI44mbZLhDTDgrc8qLB2tvOBBicPRHmnIX5iazgYQHZT2Kq8HeA/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)创建用户请求
+
+在我们程序中如何进行判断以及获取对应的数据呢？
+
+- 这里我们需要判断接口是 `/users`，并且请求方式是POST方法去获取传入的数据；
+- 获取这种body携带的数据，我们需要通过监听req的 `data`事件来获取；
+
+```
+if (req.url.indexOf('/users') !== -1) {
+  if (req.method === 'POST') {
+  
+    // 可以设置编码，也可以在下方通过 data.toString() 获取字符串格式
+    req.setEncoding('utf-8');
+
+    req.on('data', (data) => {
+      const {username, password} = JSON.parse(data);
+      console.log(username, password);
+    });
+
+    res.end("create user success");
+  } else {
+    res.end("users list");
+  }
+} else {
+  res.end("error message");
+}
+```
+
+将JSON字符串格式转成对象类型，通过`JSON.parse`方法即可。
+
+##### 1.2.3. header属性
+
+在request对象的header中也包含很多有用的信息：
+
+```
+const server = http.createServer((req, res) => {
+  console.log(req.headers);
+
+  res.end("Hello Header");
+});
+```
+
+浏览器会默认传递过来一些信息：
+
+```
+{
+  'content-type': 'application/json',
+  'user-agent': 'PostmanRuntime/7.26.5',
+  accept: '*/*',
+  'postman-token': 'afe4b8fe-67e3-49cc-bd6f-f61c95c4367b',
+  host: 'localhost:8000',
+  'accept-encoding': 'gzip, deflate, br',
+  connection: 'keep-alive',
+  'content-length': '48'
+}
+```
+
+`content-type`是这次请求携带的数据的类型：
+
+- `application/json`表示是一个json类型；
+- `text/plain`表示是文本类型；
+- `application/xml`表示是xml类型；
+- `multipart/form-data`表示是上传文件；
+
+`content-length`：
+
+- 文件的大小和长度
+
+`keep-alive`：
+
+- http是基于TCP协议的，但是通常在进行一次请求和响应结束后会立刻中断；
+
+- 在http1.0中，如果想要继续保持连接：
+
+- - 浏览器需要在请求头中添加 `connection: keep-alive`；
+  - 服务器需要在响应头中添加 `connection:keey-alive`；
+  - 当客户端再次放请求时，就会使用同一个连接，直接一方中断连接；
+
+- 在http1.1中，所有连接默认是 `connection: keep-alive`的；
+
+- - 不同的Web服务器会有不同的保持 `keep-alive`的时间；
+  - Node中默认是5s中；
+
+`accept-encoding`：
+
+- 告知服务器，客户端支持的文件压缩格式，比如js文件可以使用gzip编码，对应 `.gz`文件；
+
+`accept`：
+
+- 告知服务器，客户端可接受文件的格式类型；
+
+`user-agent`：
+
+- 客户端相关的信息；
+
+#### 1.3. 响应对象response
+
+##### 1.3.1. 返回响应结果
+
+如果我们希望给客户端响应的结果数据，可以通过两种方式：
+
+- Write方法：这种方式是直接写出数据，但是并没有关闭流；
+- end方法：这种方式是写出最后的数据，并且写出后会关闭流；
+
+```
+const http = require('http');
+
+const server = http.createServer((req, res) => {
+
+  // 响应数据的方式有两个:
+  res.write("Hello World");
+  res.write("Hello Response");
+  res.end("message end");
+});
+
+server.listen(8000, () => {
+  console.log("服务器启动🚀~")
+});
+```
+
+如果我们没有调用 `end`和`close`，客户端将会一直等待结果，所以客户端在发送网络请求时，都会设置超时时间。
+
+##### 1.3.2. 返回状态码
+
+Http状态码（Http Status Code）是用来表示Http响应状态的数字代码：
+
+- Http状态码非常多，可以根据不同的情况，给客户端返回不同的状态码；
+- 常见的状态码是下面这些（后续项目中，也会用到其中的状态码）；
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXuvfXvFoaXOVJ29jk0SkBGbYE9p2W2Q4QDibibJH8W88PIqibqXnq1ppFakhjoQo8IWPoL0KibLpqJvibFw/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)状态码
+
+设置状态码常见的有两种方式：
+
+```
+res.statusCode = 400;
+res.writeHead(200);
+```
+
+##### 1.3.3. 响应头文件
+
+返回头部信息，主要有两种方式：
+
+- `res.setHeader`：一次写入一个头部信息；
+- `res.writeHead`：同时写入header和status；
+
+```
+res.setHeader("Content-Type", "application/json;charset=utf8");
+
+res.writeHead(200, {
+  "Content-Type": "application/json;charset=utf8"
+})
+```
+
+Header设置 `Content-Type`有什么作用呢？
+
+- 默认客户端接收到的是字符串，客户端会按照自己默认的方式进行处理；
+
+比如，我们返回的是一段HTML，但是没有指定格式：
+
+```
+res.end('<h2>Hello World</h2>')
+```
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXuvfXvFoaXOVJ29jk0SkBGbYhcq8kxyag70Du07GP25EmvgUP9YebEKic6MQJxbCxNsdibsib4Jf3Y3vA/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)image-20201030154312050
+
+但是，如果我们指定了格式：
+
+```
+res.setHeader("Content-Type", "text/html;charset=utf8");
+res.end('<h2>Hello World</h2>')
+```
+
+![图片](https://mmbiz.qpic.cn/mmbiz_jpg/O8xWXzAqXuvfXvFoaXOVJ29jk0SkBGbYCc4y2GKPr3Sib3iaaUc8zliajHdxhHD78dPdRia52t5F9XfJx9WTMcnxicw/640?wx_fmt=jpeg&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)image-20201030154404172
+
+如果我们希望返回一段JSON数据，应该怎么做呢？
+
+```
+res.writeHead(200, {
+  "Content-Type": "application/json;charset=utf8"
+})
+
+const data = {
+  name: "王红元",
+  age: 18,
+  height: 1.88
+};
+
+res.end(JSON.stringify(data));
+```
+
+### 二. Web其他补充
+
+#### 2.1. 文件上传的使用
+
+如果是一个很大的文件需要上传到服务器端，服务器端进行保存应该如何操作呢？
+
+```
+const server = http.createServer((req, res) => {
+  if (req.url === '/upload') {
+    if (req.method === 'POST') {
+      const fileWriter = fs.createWriteStream('./foo.png');
+      req.pipe(fileWriter);
+
+      const fileSize = req.headers['content-length'];
+      let curSize = 0;
+      console.log(fileSize);
+
+      req.on("data", (data) => {
+        curSize += data.length;
+        console.log(curSize);
+        res.write(`文件上传进度: ${curSize/fileSize * 100}%\n`);
+      });
+
+      req.on('end', () => {
+        res.end("文件上传完成~");
+      })
+    }
+  } else {
+    res.end("error message");
+  }
+});
+```
+
+这个时候我们发现文件上传成功了，但是文件却打不开：
+
+- 这是因为我们写入的数据，里面包含一些特殊的信息；
+- 这些信息打开的软件并不能很好的解析；
+
+```
+const server = http.createServer((req, res) => {
+  if (req.url === '/upload') {
+    if (req.method === 'POST') {
+      // 图片文件必须设置为二进制的
+      req.setEncoding('binary');
+
+      // 获取content-type中的boundary的值
+      var boundary = req.headers['content-type'].split('; ')[1].replace('boundary=','');
+      
+      // 记录当前数据的信息
+      const fileSize = req.headers['content-length'];
+      let curSize = 0;
+      let body = '';
+
+      // 监听当前的数据
+      req.on("data", (data) => {
+        curSize += data.length;
+        res.write(`文件上传进度: ${curSize/fileSize * 100}%\n`);
+        body += data;
+      });
+
+      // 数据结构
+      req.on('end', () => {
+        // 切割数据
+        const payload = qs.parse(body, "\r\n", ":");
+        // 获取最后的类型(image/png)
+        const fileType = payload["Content-Type"].substring(1);
+        // 获取要截取的长度
+        const fileTypePosition = body.indexOf(fileType) + fileType.length;
+        let binaryData = body.substring(fileTypePosition);
+        binaryData = binaryData.replace(/^\s\s*/, '');
+
+        // binaryData = binaryData.replaceAll('\r\n', '');
+        const finalData = binaryData.substring(0, binaryData.indexOf('--'+boundary+'--'));
+
+        fs.writeFile('./boo.png', finalData, 'binary', (err) => {
+          console.log(err);
+          res.end("文件上传完成~");
+        })
+      })
+    }
+  } else {
+    res.end("error message");
+  }
+});
+```
+
+#### 2.2. http发送网络请求
+
+axios库可以在浏览器中使用，也可以在Node中使用：
+
+- 在浏览器中，axios使用的是封装xhr；
+- 在Node中，使用的是http内置模块；
+
+所以http模块是可以在Node中直接发送网络请求的。
+
+发送get请求：
+
+```
+http.get("http://localhost:8000", (res) => {
+  res.on('data', data => {
+    console.log(data.toString());
+    console.log(JSON.parse(data.toString()));
+  })
+});
+```
+
+发送post请求：
+
+```
+const req = http.request({
+  method: 'POST',
+  hostname: "localhost",
+  port: 8000
+}, (res) => {
+  res.on('data', data => {
+    console.log(data.toString());
+    console.log(JSON.parse(data.toString()));
+  })
+})
+
+req.on('error', err => {
+  console.log(err);
+})
+
+req.end();
+```
+
+## 10.登录和session-cookie
+
+### 10.1.邂逅session-cookie
+
+#### 10.1.1.为什么需要登录凭证？
+
+web开发中，我们使用最多的协议是http，但是http是一个无状态的协议，每个http请求都是独立的，因此即使是同一个用户的多次连续请求，服务端也无法识别此用户的身份。所以我们必须得有个办法证明我们登录过。
+
+#### 10.1.2.认识cookie
+
+* Cookie（复数形态Cookies），又称为“小甜饼”。类型为“小型文本文件，某些网站为了辨别用户身份而存储在用户本地终端（Client Side）上的数据。
+  * 浏览器会在特定的情况下携带上cookie来发送请求，我们可以通过cookie来获取一些信息；
+* Cookie总是保存在客户端中，按在客户端中的存储位置，Cookie可以分为内存Cookie和硬盘Cookie。
+  * 内存Cookie由浏览器维护，保存在内存中，浏览器关闭时Cookie就会消失，其存在时间是短暂的；
+  * 硬盘Cookie保存在硬盘中，有一个过期时间，用户手动清理或者过期时间到时，才会被清理；
+
+* 如果判断一个cookie是内存cookie还是硬盘cookie呢？
+  * 没有设置过期时间，默认情况下cookie是内存cookie，在关闭浏览器时会自动删除；
+  * 有设置过期时间，并且过期时间不为0或者负数的cookie，是硬盘cookie，需要手动或者到期时，才会删除；
+
+#### 10.1.3.cookie常见的属性
+
+**cookie的生命周期：**
+
+* 默认情况下（即未设置过期时间）的cookie是内存cookie，也称之为会话cookie，也就是在浏览器关闭时会自动被删除；
+* 我们可以通过设置expires或者max-age来设置过期的时间；
+  * expires：设置的是Date.toUTCString()，设置格式是;expires=date-in-GMTString-format；
+  * max-age：设置过期的秒钟，;max-age=max-age-in-seconds (例如一年为60*60*24*365)；
+* cookie的作用域：（允许cookie发送给哪些URL）
+  * Domain：指定哪些主机可以接受cookie
+    * 如果不指定，那么默认是origin，不包括子域名。
+    * 如果指定Domain，则包含子域名。例如，如果设置Domain=mozilla.org，则Cookie 也包含在子域名中（如developer.mozilla.org）。
+  * Path：指定主机下哪些路径可以接受cookie
+    * 例如，设置Path=/docs，则以下地址都会匹配：p/docsp/docs/Web/p/docs/Web/HTTP
+
+#### 10.1.4.客户端设置cookie
+
+js直接设置和获取cookie：
+
+```
+console.log(document.cookie)
+```
+
+这个cookie会在会话关闭时被删除掉；
+
+```
+document.cookie = "name=coderwhy"
+document.cookie = "age=18"
+```
+
+设置cookie，同时设置过期时间（默认单位是秒钟）服务器设置cookie
+
+```
+document.cookie = "name=coderwhy;max-age=10"
+```
+
+#### 10.1.5.服务端设置cookie
+
+Koa中默认支持直接操作cookie
+
+* /test请求中设置cookiep
+* /demo请求中获取cookie
+
+```
+const Koa = require('koa')
+const Router = require('koa-router')
+
+const app = new Koa()
+const userRouter = new Router({
+	prefix: '/user'
+})
+
+app.use(userRouter.routes())
+app.use(userRouter.allowedMethods())
+
+userRouter.get('/', (ctx) => {
+	ctx.cookie.set('name', 'chh', {
+		maxAge: 5 * 1000
+	})
+	ctx.body = '登录成功'
+})
+
+userRouter.get('/demo', (ctx) => {
+	const value = ctx.cookie.get('name')
+	ctx.body = `cookie值为：${value}`
+})
+```
+
+>服务端maxAge的单位为毫秒，客户端max-age单位为秒
+
+#### 10.1.6.认识session
+
+#### 10.1.7.服务端设置session
+
+在koa中，我们可以借助于koa-session来实现session认证
+
+`npm instal koa-session`
+
+```
+const Koa = require('koa')
+const Router = require('koa-router')
+const koaSession = require('koa-session')
+
+const userRouter = new Router({
+	prefix: '/user'
+})
+const session = koaSession({
+	key: 'sessionid', // cookie的key
+	maxAge: 5 *1000, // 过期时间
+	httpOnly: true, // 不允许通过js获取cookie
+	rolling: true, // 每次响应时，刷新session的有效期
+	signed: true // 是否使用signed签名认证，防止数据被篡改
+}, app)
+app.keys = ['aaa'] // session加盐
+app.use(session)
+app.use(userRouter.routes())
+app.use(userRouter.allowedMethods())
+userRouter.get('/', (ctx, next) => {
+	const id = 110, name = chh
+	ctx.session.user = { id, name }
+	ctx.body = '登录成功'
+})
+userRouter.get('/demo', (ctx, next) => {
+	console.log(ctx.session.user)
+	ctx.body = 'demo'
+})
+```
+
+### 10.2.邂逅token
+
+#### 10.2.1.cookie和session的缺点：
+
+1. Cookie会被附加在每个HTTP请求中，所以无形中增加了流量（事实上某些请求是不需要的）
+2. Cookie是明文传递的，所以存在安全性的问题
+3. Cookie的大小限制是4KB，对于复杂的需求来说是不够的
+4. 对于浏览器外的其他客户端（比如iOS、Android），必须手动的设置cookie和session
+5. 在分布式系统和服务器集群中线保证其他系统也可以正确的解析session是比较麻烦的
+
+#### 10.2.2.认识token
+
+所以，在目前的前后端分离的开发过程中，使用token来进行身份验证的是最多的情况：
+
+* token可以翻译为令牌；也就是在验证了用户账号和密码正确的情况，给用户颁发一个令牌；
+* 这个令牌作为后续用户访问一些接口或者资源的凭证；
+* 我们可以根据这个凭证来判断用户是否有权限来访问；
+
+token的使用应该分成两个重要的步骤：
+
+* 生成token：登录的时候，颁发token；
+* 验证token：访问某些资源或者接口时，验证token；
+
+#### 10.2.3.JWT实现Token机制
+
+JWT生成的Token由三部分组成
+
+1. header
+   * alg：采用的加密算法，默认是HMAC SHA256（HS256），采用同一个密钥进行加密和解密；
+   * typ：JWT，固定值，通常都写成JWT即可；
+   * 会通过base64Url算法进行编码；
+2. payload
+   * 携带的数据，比如我们可以将用户的id和name放到payload中
+   * 默认也会携带iat（issued at），令牌的签发时间；
+   * 我们也可以设置过期时间：exp（expiration time）；
+   * 会通过base64Url算法进行编码
+3. signature
+   * 设置一个secretKey，通过将前两个的结果合并后进行HMACSHA256的算法；
+   * HMACSHA256(base64Url(header)+.+base64Url(payload), secretKey);
+   * 但是如果secretKey暴露是一件非常危险的事情，因为之后就可以模拟颁发token，也可以解密token；
+
+#### 10.2.4.token的使用
+

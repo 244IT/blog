@@ -1,6 +1,18 @@
 ## 01.项目架构
 
+>完整的项目接口包括：
+>
+>* 面向用户的业务接口；
+>* 面向企业或者内部的后台管理接口；
+
+本项目暂且仅为面向用户的业务接口
+
 ### 1.1.目录结构的划分
+
+>目录结构的划分：
+>
+>* 按照功能模块划分（本项目）
+>* 按照业务模块划分
 
 * node_modules
 * src
@@ -11,13 +23,14 @@
     * index.js：主文件
   * constants：常量
     * error-types.js：错误类型
+    * file-paths.js：静态文件路径
   * controller：控制器
   * middleware：中间件
   * router：路由相关
     * index.js：入口文件，配置路由的动态加载
   * service：数据库操作相关
   * utils：工具类
-  * main: 项目入口
+  * main.js: 项目入口
 * .env：配置文件
 * package-lock.json
 * package.json：包配置文件
@@ -26,9 +39,9 @@
 
 * koa
 * koa-router
-* koa-bodyparser
-* koa-multer
-* mysql2
+* koa-bodyparser：获取body参数
+* koa-multer：图片上传
+* mysql2：连接数据库的引擎
 * jsonwebtoken：使用jwt实现token机制
 * jimp：图片处理库
 * nodemon：生产依赖
@@ -1275,6 +1288,16 @@ const avatarUpload = Multer({
   dest: AVATAR_PATH,
 })
 const avatarHandle = avatarUpload.single('avater')
+```
+
+`contants/file-paths.js`
+
+```
+const AVATAR_PATH = './upload/avatar'
+
+module.exports = {
+  AVATAR_PATH,
+}
 ```
 
 `file.controller.js`
