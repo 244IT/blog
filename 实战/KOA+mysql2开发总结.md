@@ -193,74 +193,30 @@ connections.getConnection((err, conn) => {
   })
 })
 
-module.exports = connections
+module.exports = connections.promise()
 ```
 
 ### 1.6.统一错误处理
 
-* 在`user`路由使用`verifyUser`中间件
-
-```
-const Router = require('koa-router')
-
-const { create } = require('../controller/user.controller')
-const { verifyUser } = require('../middleware/user.middleware')
-
-const userRouter = new Router({
-  prefix: '/user'
-})
-
-userRouter.post('/', verifyUser, create)
-
-
-module.exports = userRouter
-```
-
-* 在`moddleware`添加`verifyUser`中间件
-
-```
-const errorType = require('../constants/error-types')
-const service = require('../service/user.service')
-
-/* 校验账号账号密码中间件 */
-const verifyUser = async (ctx, next) => {
-
-  // 获取用户的昵称和密码
-  const { name, password } = ctx.request.body
-
-  console.log('错误校验')
-  console.log(name, password)
-  // 判断用户账号密码是否为空
-  if(!name || !password) {
-    const error = new Error(errorType.NAME_OR_PASSWORD_IS_REQUIRED)
-    return ctx.app.emit('error', error, ctx)
-  }
-
-  // 判断是否已经存在此账号
-  const result = await service.getUserByName(name)
-  console.log(result)
-  if(result.length) {
-    const error = new Error(errorType.USER_ALREADT_EXIST)
-    return ctx.app.emit('error', error, ctx)
-  }
-
-  await next()
-}
-
-module.exports = verifyUser
-```
-
 * 在`constants`文件夹下添加`error-type.js`文件，存储错误常量
 
 ```
-const NAME_OR_PASSWORD_IS_REQUIRED = 'name or password is required'
-const USER_ALREADT_EXIST = 'user already exist'
+const NAME_OR_PASSWORD_IS_REQUIRED = '1'
+const USER_ALREADT_EXIST = '2'
 
 
 module.exports = {
   NAME_OR_PASSWORD_IS_REQUIRED,
   USER_ALREADT_EXIST
 }
+```
+
+* 在`main.js`中捕获错误
+
+```
+const errorHandle = require('./app/error-handle')
+
+app.on('error', errorHandle)
 ```
 
 * 在`app`文件夹下添加`error-handle.js`文件，将`main.js`文件夹下的错误逻辑处理函数单独提取出来
@@ -285,12 +241,13 @@ const errorHandle = (error, ctx) => {
 module.exports = errorHandle
 ```
 
-* 在`main.js`中捕获错误
+* 在需要抛出错误的地方使用添加相应语义的错误常量抛出错误即可
 
 ```
-const errorHandle = require('./app/error-handle')
+const errorType = require('../constants/error-type')
 
-app.on('error', errorHandle)
+const err = new Error(errorType.相应语义的错误常量)
+ctx.app.emit('error', err, ctx)
 ```
 
 ### 1.7.动态加载路由
@@ -324,15 +281,59 @@ useRoutes(app)
 
 ### 2.1.用户注册接口
 
-#### 1.注册密码加密处理
+**难度系数**：1颗星（共5颗星）
 
-* 在路由中添加密码加密中间件
+**用户注册接口对于后端的主要处理流程有**：
+
+1. 校验参数合法性（是否为空等）
+2. 校验用户是否已经注册过（是否在数据库中存在），存在则返回响应信息
+3. 密码加密处理（密码的安全性）
+4. 操作数据库新增用户
+
+**代码流程如下**：
+
+* 在路由中添加路由及要使用的中间件（密码用户验证及加密中间件）
 
 ```
+const Router = require('koa-router')
+
+const { create } = require('../controller/user.controller')
+const { verifyUser } = require('../middleware/user.middleware')
+
+const userRouter = new Router({
+  prefix: '/user'
+})
+
 userRouter.post('/', verifyUser, handlePassword, create)
+
+module.exports = userRouter
 ```
 
-* 在`user.middleware.js`中新增`handlePassword`中间件
+* 在`user.middleware.js`中新增`verifyUser`中间件，先进行参数合法性和是否注册逻辑处理
+
+```
+const errorType = require('../constants/error-types')
+const service = require('../service/user.service.js')
+const verifyUser = async (ctx, next) => {
+	const { name, password } = ctx.request.body
+	if(!name || !password) {
+		const err = new Error(errorType.NAME_OR_PASSWORD_IS_REQUIRED)
+		return ctx.app.emit('error', err, ctx)
+	}
+	const result = await service.getUserByName(name)
+  	console.log(result)
+  	if(result.length) {
+        const error = new Error(errorType.USER_ALREADT_EXIST)
+        return ctx.app.emit('error', error, ctx)
+    }
+  	await next()
+}
+
+module.exports = verifyUser
+```
+
+* 在`user.service.js`中新增`getUserByName`
+* 在`user.middleware.js`中新增`handlePassword`中间件，进行密码加密处理
 
 ```
 const md5password = require('../utils/handle-password')
@@ -344,7 +345,7 @@ const handlePassword = (ctx, nect) => {
 }
 ```
 
-* 在`utils`文件夹下新增`handle-password.js`文件
+* 在`utils`文件夹下新增`handle-password.js`文件，用作一个工具js文件，用于获取密码MD5加密后的字符串
 
 ```
 const crypto = require('crypto')
@@ -358,6 +359,8 @@ const md5password = (password) => {
 
 module.exports = md5password
 ```
+
+* 
 
 ### 2.2.用户登录接口
 
