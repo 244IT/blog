@@ -1,12 +1,28 @@
-## 1.邂逅MySQL
+# 基础
 
-### 1.1.MySQL的介绍：
+## 1.认识数据库
+
+### 1.1.为什么需要数据库
+
+* 对数据进行有组织地存储和管理
+
+### 1.2.什么是数据库
+
+* 数据库可以理解为管理数据的仓库，本质上是程序、软件
+
+### 1.3.常见的数据库有哪些
+
+
+
+## 2.邂逅MySQL
+
+### 1.1.MySQL的介绍
 
 * MySQL原本是一个开源的数据库，原开发者为瑞典的MySQL AB公司；
 
-* 在2008年被Sun公司收购；在2009年，Sun被Oracle收购；
+* 在2008年被Sun公司收购；在2009年，Sun被Oracle收购，所以目前MySQL归属于Oracle；
 
-* 所以目前MySQL归属于Oracle； 
+* MySQL分为社区版和企业版
 
 **MySQL是一个关系型数据库，其实本质上就是一款软件、一个程序：**
 
@@ -113,7 +129,7 @@ Sun Dec 20 15:13:13 2020
 
 **常用命令**
 
-* 显示当前服务器名称： SELECT VERSION();
+* 显示当前数据库版本： SELECT VERSION();
 * 显示当前日期： SELECT NOW();
 * 显示当前用户： SELECT USER();
 * 显示当前数据库： SELECT DATABASE();
@@ -125,7 +141,7 @@ Sun Dec 20 15:13:13 2020
 * SQL语句必须以分号结尾
 *  如果遇到关键字作为表名或者字段名称，可以使用``包裹;
 
-## 2.初识SQL
+## 3.初识SQL
 
 ### 2.1.认识SQL语句
 
@@ -160,8 +176,7 @@ Sun Dec 20 15:13:13 2020
 
  我们知道不同的数据会划分为不同的数据类型，在数据库中也是一样：
 
-* MySQL支持的数据类型有：数字类型，日期和时间类型，字符串（字符和字节）类型，空间类型和 JSON数
-  据类型。
+* MySQL支持的数据类型有：数字类型，日期和时间类型，字符串（字符和字节）类型，空间类型和 JSON数据类型。
 
 数字类型
 
@@ -218,7 +233,7 @@ TIMESTAMP类型有专有的自动更新特性，将在后面描述。
 | LONGBLOB   | 0-4 294 967 295 bytes | 二进制形式的极大文本数据        |
 | LONGTEXT   | 0-4 294 967 295 bytes | 极大文本数据                    |
 
-## 3.数据库操作
+## 4.数据库操作
 
 * 查看当前数据库管理系统下的数据库列表：`SHOW DATABASES`
 * 创建数据库：`CREATE DATABASE [IF NOT EXISTS] db_name`
@@ -233,7 +248,7 @@ demo:修改数据库的字符集和排序规则
 ALTER DATABASE bilibili CHARACTER SET = utf8 COLLATE = utf8_unicode_ci;
 ```
 
-## 4.数据表操作
+## 5.数据表操作
 
 ### 3.1.表约束
 
@@ -334,11 +349,11 @@ SHOW CREATE TABLE `student`
 
 6. 修改表：
 
-* 修改表的名字：`ALTER TABLE tbl_name RENAME TO new_tbl_name`
-* 添加一个新的列：`ALTER TABLE tbl_name ADD column_name data_type`
-* 修改字段的名称：`ALTER TABLE tbl_name CHANGE old_column_name new_column_name data_type`
-* 修改字段类型：`ALTER TABLE tbl_name MODIFY column_name new_data_type`
-* 删除某一个字段：`ALTER TABLE tbl_name DROP column_name`
+* 修改表的名字：`ALTER TABLE tbl_name RENAME [TO|AS] new_tbl_name` ，`RENAME TABLE tbl_name TO new_tbl_name [tbl_name2 TO new_tbl_name2]...`
+* 添加列（字段）：`ALTER TABLE tbl_name ADD column_name data_type`
+* 删除列（字段）：`ALTER TABLE tbl_name DROP [COLUMN] col_name`
+* 修改列（字段）的名称：`ALTER TABLE tbl_name CHANGE old_column_name new_column_name data_type`
+* 修改列（字段）类型：`ALTER TABLE tbl_name MODIFY column_name new_data_type`
 * 根据一个表结构去创建另外一张表：`CREATE TABLE new_tbl_name LIKE tbl_name`
 * 根据另外一个表的所有内容，创建一个新的表：`CREATE TABLE new_table_name (SELECT * FROM tbl_name)`
 
@@ -522,7 +537,7 @@ FROM `products` GROUP BY brand
 HAVING avgPrice < 4000 and avgScore > 7;
 ```
 
-## 5.多表操作
+## 6.多表操作
 
 #### 5.1.多表设计-外键(GROUP BY)
 
@@ -690,7 +705,7 @@ LEFT JOIN courses cs
 ON ssc.course_id = cs.id
 GROUP BY stu.name;
 ```
-## 6.函数
+## 7.函数
 
 ### 5.1.聚合函数
 
@@ -728,7 +743,7 @@ SELECT COUNT(DISTINCT price) FROM `products`;
 
 * alter user 'root'@'localhost' identified by '新密码'
 
-## 7.邂逅mysql2
+## 8.邂逅mysql2
 
 ### 7.1.认识mysql2
 

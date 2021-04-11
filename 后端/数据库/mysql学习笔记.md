@@ -213,14 +213,21 @@
 > 6. 添加外键约束： ALTER TABLE tbl_name ADD [CONSTRAINT [symbol]] FOREIGN KEY [index_name] (index_col_name,...) REFERENCES reference_definition
 >
 > 7. 添加/删除默认约束： ALTER TABLE tbl_name ALTER [COLUMN] col_name {SET DEFAULT literal | DROP DEFAULT}
+>
 > 8. 删除主键约束： ALTER TABLE tbl_name DROP PRIMARY KEY (不需要指定名字是因为任何一个表只有一个主键)
+>
 > 9. 删除唯一约束： ALTER TABLE tbl_name DROP  {INDEX | KEY} index_name
+>
 > 10. 删除外键约束： ALTER TABLE tbl_name DROP  FOREIGN KEY fk_symbol
+>
 > 11. 修改列定义： ALTER TABLE tbl_name MODIFY [COLUMN] col_name column_definitioin [FIRST | AFTER col_name]
-> 12. 修改列名称(也可以修改列名称)： ALTER TABLE tbl_name CHANGE [COLUMN] old_col_name new_col_name column_definitioin [FIRST | AFTER col_name]
-> 13. 数据表更名：
->     * 方法一： ALTER TABLE tbl_name RENAME [TO | AS] new_tbl_name
->     * 方法二： RENAME TABLE tbl_name TO new_tbl_name [tbl_name2 TO new_tbl_name2]...
+>
+> 
+>
+> 1. 修改列名称(也可以修改列名称)： ALTER TABLE tbl_name CHANGE [COLUMN] old_col_name new_col_name column_definitioin [FIRST | AFTER col_name]
+> 2. 数据表更名：
+>    * 方法一： ALTER TABLE tbl_name RENAME [TO | AS] new_tbl_name
+>    * 方法二： RENAME TABLE tbl_name TO new_tbl_name [tbl_name2 TO new_tbl_name2]...
 
 ### 4-1.记录操作
 
